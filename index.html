@@ -912,7 +912,7 @@ async function guardarAvance() {
     resultado = await sb.post('registros_conductor', data);
     if (resultado && resultado.length > 0) ESTADO.registroActual = resultado[0];
   }
-  if (resultado) { toast('✅ Avance guardado', 'success'); }
+  if (resultado) { toast('✅ Avance guardado', 'success'); sincronizarASheets(ESTADO.registroActual || resultado[0] || data, 'registro'); }
   else { guardarPendienteLocal({tipo:'registro', data}); toast('⚠️ Guardado localmente', 'warning'); }
   btn.disabled = false; btn.textContent = '💾 Guardar avance';
 }
@@ -968,7 +968,7 @@ async function cerrarTurno() {
   }
   cerrarConfirma();
   if (ok) {
-    toast('🎉 Turno cerrado y enviado', 'success');
+    toast('🎉 Turno cerrado y enviado', 'success'); sincronizarASheets(ESTADO.registroActual, 'registro');
     document.getElementById('btn-cerrar-turno').disabled = true;
     document.getElementById('btn-cerrar-turno').textContent = '✓ Turno cerrado';
     setTimeout(() => limpiarFormulario(), 2000);
@@ -1074,7 +1074,7 @@ async function agregarFactura() {
     orden_entrega: ESTADO.facturas.length + 1,
   };
   const r = await sb.post('facturas_despacho', factura);
-  if (r && r.length > 0) { ESTADO.facturas.push(r[0]); toast(`Factura #${num} agregada`, 'success'); }
+  if (r && r.length > 0) { ESTADO.facturas.push(r[0]); toast(`Factura #${num} agregada`, 'success'); sincronizarASheets(r[0], 'factura'); }
   else { factura.id = 'local_'+Date.now(); ESTADO.facturas.push(factura); toast(`Factura #${num} guardada localmente`, 'warning'); }
   cerrarModalFactura(); renderizarFacturas();
 }
@@ -1118,7 +1118,7 @@ async function cerrarTareaFactura(facturaId, nuevoEstado) {
     } else {
       const idx = ESTADO.facturas.findIndex(f=>f.id==facturaId); if(idx>=0) ESTADO.facturas[idx]={...ESTADO.facturas[idx],...update};
     }
-    toast(`📍 ${estadoLabel(nuevoEstado)} — Ubicación registrada`, 'success');
+    toast(`📍 ${estadoLabel(nuevoEstado)} — Ubicación registrada`, 'success'); sincronizarASheets({...factura,...update}, 'factura');
     // Notificar WhatsApp
     enviarNotificacionWsp(factura, nuevoEstado, lat, lng);
     renderizarFacturas();
@@ -1267,6 +1267,29 @@ async function cargarResumenAdmin() {
     <span style="color:var(--azul)">${abiertos} abiertos</span> · 
     <span style="color:var(--verde)">${cerrados} cerrados</span>`;
   cargarConfigWsp();
+}
+
+
+// ═══════════════════════════════════════════
+// SINCRONIZACIÓN GOOGLE SHEETS
+// ═══════════════════════════════════════════
+async function sincronizarASheets(data, tipo) {
+  if (!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.includes('TU_SCRIPT')) return;
+  try {
+    const dataEncoded = encodeURIComponent(JSON.stringify(data));
+    const url = CONFIG.APPS_SCRIPT_URL + '?tipo=' + tipo + '&data=' + dataEncoded;
+    const r = await fetch(url, { method: 'GET' });
+    const json = await r.json();
+    if (json.ok) console.log('[Sheets] OK:', json.accion);
+    else console.warn('[Sheets] Error:', json.error);
+  } catch(e) {
+    try {
+      const dataEncoded = encodeURIComponent(JSON.stringify(data));
+      const url = CONFIG.APPS_SCRIPT_URL + '?tipo=' + tipo + '&data=' + dataEncoded;
+      await fetch(url, { mode: 'no-cors' });
+      console.log('[Sheets] Enviado no-cors');
+    } catch(e2) { console.warn('[Sheets] Fallo:', e2); }
+  }
 }
 
 // ═══════════════════════════════════════════
