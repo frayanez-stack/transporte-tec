@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#c0392b"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="TEC Transporte"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="logo.png"/>
+<title>Transporte TEC</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+/* ══════════════════════════════════════════════
+   VARIABLES Y RESET
+══════════════════════════════════════════════ */
+:root {
+  --rojo: #c0392b;
+  --rojo-dark: #922b21;
+  --rojo-light: #f9ebea;
+  --negro: #1a1a1a;
+  --gris-dark: #4a4a4a;
+  --gris: #7f8c8d;
+  --gris-light: #ecf0f1;
+  --blanco: #ffffff;
+  --verde: #27ae60;
+  --verde-light: #d5f5e3;
+  --amarillo: #f39c12;
+  --azul: #2980b9;
+  --azul-light: #d6eaf8;
+  --sombra: 0 2px 12px rgba(0,0,0,0.10);
+  --sombra-hover: 0 6px 24px rgba(192,57,43,0.18);
+  --radio: 12px;
+  --radio-lg: 20px;
+  --font: 'Nunito', 'Calibri', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:#f5f5f5;color:var(--negro);min-height:100vh;overflow-x:hidden;}
+input,select,textarea,button{font-family:var(--font);}
+button{cursor:pointer;}
+
+/* ══════════════════════════════════════════════
+   SPLASH SCREEN
+══════════════════════════════════════════════ */
+#splash{
+  position:fixed;inset:0;background:var(--rojo);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:9999;transition:opacity 0.6s ease;
+}
+#splash img{width:120px;height:120px;object-fit:contain;margin-bottom:24px;
+  animation:pulso 1.5s ease-in-out infinite;}
+#splash h1{color:#fff;font-size:2rem;font-weight:800;letter-spacing:-0.5px;}
+#splash p{color:rgba(255,255,255,0.8);margin-top:8px;font-size:0.95rem;}
+#splash .loader{margin-top:40px;width:48px;height:4px;background:rgba(255,255,255,0.3);
+  border-radius:4px;overflow:hidden;}
+#splash .loader::after{content:'';display:block;height:100%;width:40%;
+  background:#fff;border-radius:4px;animation:carga 1.2s ease-in-out infinite;}
+@keyframes pulso{0%,100%{transform:scale(1);}50%{transform:scale(1.07);};}
+@keyframes carga{0%{transform:translateX(-100%);}100%{transform:translateX(300%);};}
+
+/* ══════════════════════════════════════════════
+   LOGIN
+══════════════════════════════════════════════ */
+#login-screen{
+  display:none;min-height:100vh;
+  background:linear-gradient(135deg,var(--rojo-dark) 0%,var(--rojo) 60%,#e74c3c 100%);
+  align-items:center;justify-content:center;padding:20px;
+}
+.login-card{
+  background:#fff;border-radius:var(--radio-lg);padding:40px 32px;
+  width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);
+}
+.login-logo{text-align:center;margin-bottom:28px;}
+.login-logo img{width:80px;height:80px;object-fit:contain;margin-bottom:12px;display:block;margin-inline:auto;}
+.login-logo h2{font-size:1.5rem;font-weight:800;color:var(--rojo);}
+.login-logo p{color:var(--gris);font-size:0.85rem;margin-top:4px;}
+.form-group{margin-bottom:18px;}
+.form-group label{display:block;font-size:0.85rem;font-weight:700;color:var(--gris-dark);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;}
+.form-group input,.form-group select{
+  width:100%;padding:12px 16px;border:2px solid var(--gris-light);
+  border-radius:var(--radio);font-size:0.95rem;transition:border-color 0.2s;
+  background:#fff;
+}
+.form-group input:focus,.form-group select:focus{
+  outline:none;border-color:var(--rojo);}
+.btn-login{
+  width:100%;padding:14px;background:var(--rojo);color:#fff;
+  border:none;border-radius:var(--radio);font-size:1rem;font-weight:700;
+  transition:all 0.2s;margin-top:8px;
+}
+.btn-login:hover{background:var(--rojo-dark);transform:translateY(-1px);}
+.btn-login:disabled{opacity:0.6;transform:none;}
+.login-error{color:var(--rojo);font-size:0.85rem;text-align:center;margin-top:12px;display:none;}
+
+/* ══════════════════════════════════════════════
+   APP PRINCIPAL
+══════════════════════════════════════════════ */
+#app{display:none;min-height:100vh;flex-direction:column;}
+
+/* HEADER */
+.app-header{
+  background:#fff;border-bottom:3px solid var(--rojo);
+  padding:0 16px;position:sticky;top:0;z-index:100;
+  box-shadow:var(--sombra);
+}
+.header-top{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 0;gap:12px;
+}
+.header-brand{display:flex;align-items:center;gap:10px;}
+.header-brand img{width:40px;height:40px;object-fit:contain;}
+.header-brand .brand-text h1{font-size:1.1rem;font-weight:800;color:var(--negro);}
+.header-brand .brand-text p{font-size:0.7rem;color:var(--gris);line-height:1.2;}
+.header-actions{display:flex;align-items:center;gap:8px;}
+.btn-icon{
+  padding:8px 12px;border-radius:var(--radio);border:none;
+  font-size:0.78rem;font-weight:700;cursor:pointer;transition:all 0.2s;
+}
+.btn-rojo{background:var(--rojo);color:#fff;}
+.btn-rojo:hover{background:var(--rojo-dark);}
+.btn-outline{background:transparent;color:var(--rojo);border:2px solid var(--rojo);}
+.btn-outline:hover{background:var(--rojo-light);}
+
+/* INFO USUARIO */
+.user-bar{
+  background:var(--gris-light);border-radius:var(--radio);
+  padding:10px 14px;margin-bottom:10px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+}
+.user-info{display:flex;align-items:center;gap:10px;}
+.user-avatar{
+  width:34px;height:34px;background:var(--rojo);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:800;font-size:0.9rem;flex-shrink:0;
+}
+.user-name{font-weight:700;font-size:0.9rem;}
+.user-rol{
+  font-size:0.7rem;background:var(--rojo);color:#fff;
+  padding:2px 8px;border-radius:20px;font-weight:700;
+}
+.sync-status{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.status-item{font-size:0.75rem;color:var(--gris-dark);}
+.status-item span{font-weight:700;color:var(--negro);}
+.badge-pendientes{
+  background:var(--amarillo);color:#fff;
+  border-radius:20px;padding:2px 8px;font-size:0.75rem;font-weight:700;
+}
+
+/* NAV TABS */
+.nav-tabs{
+  display:flex;gap:4px;padding:8px 0 0;overflow-x:auto;
+  scrollbar-width:none;
+}
+.nav-tabs::-webkit-scrollbar{display:none;}
+.nav-tab{
+  padding:8px 16px;border:none;background:transparent;
+  border-bottom:3px solid transparent;font-size:0.85rem;font-weight:700;
+  color:var(--gris);white-space:nowrap;transition:all 0.2s;cursor:pointer;
+}
+.nav-tab.active{color:var(--rojo);border-bottom-color:var(--rojo);}
+.nav-tab:hover:not(.active){color:var(--negro);}
+
+/* CONTENIDO */
+.app-content{padding:16px;max-width:900px;margin:0 auto;width:100%;}
+
+/* ══════════════════════════════════════════════
+   SECCIÓN: REGISTRO CONDUCTOR
+══════════════════════════════════════════════ */
+.seccion-titulo{
+  font-size:1.2rem;font-weight:800;color:var(--negro);margin-bottom:4px;
+}
+.seccion-sub{font-size:0.82rem;color:var(--gris);margin-bottom:20px;}
+
+.card{
+  background:#fff;border-radius:var(--radio-lg);
+  padding:20px;box-shadow:var(--sombra);margin-bottom:16px;
+}
+.card-titulo{
+  font-size:0.95rem;font-weight:800;color:var(--rojo);
+  margin-bottom:16px;padding-bottom:10px;
+  border-bottom:2px solid var(--rojo-light);
+  display:flex;align-items:center;gap:8px;
+}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:600px){.grid-2{grid-template-columns:1fr;}}
+
+.campo{margin-bottom:14px;}
+.campo label{
+  display:block;font-size:0.78rem;font-weight:700;
+  color:var(--gris-dark);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;
+}
+.campo input,.campo select,.campo textarea{
+  width:100%;padding:10px 14px;
+  border:2px solid #e0e0e0;border-radius:var(--radio);
+  font-size:0.92rem;transition:all 0.2s;background:#fff;
+}
+.campo input:focus,.campo select:focus,.campo textarea:focus{
+  outline:none;border-color:var(--rojo);box-shadow:0 0 0 3px rgba(192,57,43,0.1);
+}
+.campo input:disabled,.campo select:disabled{background:#f5f5f5;color:var(--gris);}
+.campo textarea{resize:vertical;min-height:80px;}
+
+/* Transportes visitados */
+.checkgroup{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;}
+.check-item{
+  display:flex;align-items:center;gap:7px;
+  background:var(--gris-light);padding:8px 14px;border-radius:var(--radio);
+  cursor:pointer;font-size:0.87rem;font-weight:600;transition:all 0.2s;
+  border:2px solid transparent;
+}
+.check-item:has(input:checked){
+  background:var(--rojo-light);border-color:var(--rojo);color:var(--rojo);
+}
+.check-item input{width:16px;height:16px;accent-color:var(--rojo);}
+
+/* Km con botón fijar */
+.km-group{display:flex;gap:8px;align-items:flex-end;}
+.km-group input{flex:1;}
+.btn-fijar{
+  padding:10px 16px;background:var(--negro);color:#fff;
+  border:none;border-radius:var(--radio);font-size:0.82rem;font-weight:700;
+  white-space:nowrap;transition:all 0.2s;
+}
+.btn-fijar:hover{background:#333;}
+.btn-fijar.fijado{background:var(--verde);}
+.km-hint{font-size:0.75rem;color:var(--gris);margin-top:4px;}
+
+/* Checklist */
+.checklist-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+}
+@media(max-width:480px){.checklist-grid{grid-template-columns:repeat(2,1fr);}}
+.check-box{
+  display:flex;align-items:center;gap:8px;
+  padding:10px;background:var(--gris-light);border-radius:var(--radio);
+  cursor:pointer;transition:all 0.2s;border:2px solid transparent;
+}
+.check-box:has(input:checked){background:var(--verde-light);border-color:var(--verde);}
+.check-box input{accent-color:var(--verde);width:16px;height:16px;}
+.check-box span{font-size:0.83rem;font-weight:600;}
+
+/* Botones de acción */
+.btn-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;}
+.btn-guardar-avance{
+  padding:12px 22px;background:#fff;color:var(--negro);
+  border:2px solid #e0e0e0;border-radius:var(--radio);
+  font-size:0.9rem;font-weight:700;transition:all 0.2s;
+}
+.btn-guardar-avance:hover{border-color:var(--negro);background:var(--gris-light);}
+.btn-cerrar-turno{
+  flex:1;padding:13px 22px;background:var(--rojo);color:#fff;
+  border:none;border-radius:var(--radio);font-size:0.95rem;font-weight:800;
+  transition:all 0.2s;position:relative;overflow:hidden;
+}
+.btn-cerrar-turno:hover:not(:disabled){background:var(--rojo-dark);transform:translateY(-1px);box-shadow:var(--sombra-hover);}
+.btn-cerrar-turno:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+
+/* ══════════════════════════════════════════════
+   SECCIÓN: FACTURAS
+══════════════════════════════════════════════ */
+.facturas-toolbar{
+  display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;
+}
+.btn-agregar-factura{
+  padding:10px 18px;background:var(--azul);color:#fff;
+  border:none;border-radius:var(--radio);font-size:0.88rem;font-weight:700;
+  transition:all 0.2s;
+}
+.btn-agregar-factura:hover{background:#1a6a9a;}
+
+.factura-card{
+  background:#fff;border-radius:var(--radio);padding:14px;
+  box-shadow:var(--sombra);margin-bottom:10px;
+  border-left:4px solid var(--azul);transition:all 0.2s;
+}
+.factura-card.entregado{border-left-color:var(--verde);}
+.factura-card.no_entregado{border-left-color:var(--rojo);}
+.factura-card.reagendado{border-left-color:var(--amarillo);}
+
+.factura-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.factura-num{font-weight:800;font-size:1rem;color:var(--azul);}
+.factura-estado{
+  font-size:0.75rem;font-weight:700;padding:3px 10px;border-radius:20px;
+}
+.estado-pendiente{background:#e8f4f8;color:var(--azul);}
+.estado-entregado{background:var(--verde-light);color:var(--verde);}
+.estado-no_entregado{background:var(--rojo-light);color:var(--rojo);}
+.estado-reagendado{background:#fef9e7;color:var(--amarillo);}
+
+.factura-info{font-size:0.82rem;color:var(--gris-dark);line-height:1.6;}
+.factura-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.btn-geo{
+  padding:7px 12px;border:none;border-radius:8px;
+  font-size:0.78rem;font-weight:700;cursor:pointer;transition:all 0.2s;
+}
+.btn-geo-entregar{background:var(--verde);color:#fff;}
+.btn-geo-noentregar{background:var(--rojo);color:#fff;}
+.btn-geo-reagendar{background:var(--amarillo);color:#fff;}
+.btn-geo-mapa{background:var(--azul-light);color:var(--azul);}
+
+/* Geo badge */
+.geo-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:0.72rem;background:var(--verde-light);color:var(--verde);
+  padding:3px 8px;border-radius:20px;margin-top:6px;font-weight:700;
+}
+
+/* Modal de ingreso factura */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);
+  z-index:1000;align-items:center;justify-content:center;padding:16px;
+}
+.modal-overlay.active{display:flex;}
+.modal-box{
+  background:#fff;border-radius:var(--radio-lg);padding:24px;
+  width:100%;max-width:480px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:slideUp 0.3s ease;
+}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;};}
+.modal-titulo{font-size:1.1rem;font-weight:800;margin-bottom:16px;color:var(--negro);}
+.modal-actions{display:flex;gap:10px;margin-top:16px;}
+.btn-modal-cancel{
+  flex:1;padding:11px;background:var(--gris-light);color:var(--negro);
+  border:none;border-radius:var(--radio);font-weight:700;font-size:0.9rem;
+}
+.btn-modal-ok{
+  flex:2;padding:11px;background:var(--azul);color:#fff;
+  border:none;border-radius:var(--radio);font-weight:700;font-size:0.9rem;
+}
+
+/* ══════════════════════════════════════════════
+   SECCIÓN: HISTORIAL
+══════════════════════════════════════════════ */
+.historial-toolbar{
+  display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;
+}
+.historial-toolbar input{
+  flex:1;padding:10px 14px;border:2px solid #e0e0e0;
+  border-radius:var(--radio);font-size:0.88rem;min-width:160px;
+}
+.historial-toolbar input:focus{outline:none;border-color:var(--rojo);}
+.btn-exportar{
+  padding:10px 16px;background:var(--verde);color:#fff;
+  border:none;border-radius:var(--radio);font-size:0.85rem;font-weight:700;
+}
+
+.tabla-wrapper{overflow-x:auto;border-radius:var(--radio);box-shadow:var(--sombra);}
+table{width:100%;border-collapse:collapse;background:#fff;font-size:0.82rem;}
+th{
+  background:var(--rojo);color:#fff;padding:10px 12px;
+  text-align:left;font-weight:700;font-size:0.78rem;white-space:nowrap;
+}
+td{padding:10px 12px;border-bottom:1px solid var(--gris-light);vertical-align:top;}
+tr:hover td{background:var(--rojo-light);}
+.tag{
+  display:inline-block;padding:2px 8px;border-radius:20px;font-size:0.72rem;font-weight:700;
+}
+.tag-abierto{background:#e8f4f8;color:var(--azul);}
+.tag-cerrado{background:var(--verde-light);color:var(--verde);}
+
+/* ══════════════════════════════════════════════
+   TOAST / CONFIRMACIÓN
+══════════════════════════════════════════════ */
+.toast-container{
+  position:fixed;top:80px;right:16px;z-index:2000;display:flex;flex-direction:column;gap:8px;
+}
+.toast{
+  background:#fff;border-radius:var(--radio);padding:14px 18px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.15);min-width:260px;max-width:340px;
+  display:flex;align-items:center;gap:10px;
+  animation:toastIn 0.3s ease;border-left:4px solid var(--verde);
+}
+.toast.error{border-left-color:var(--rojo);}
+.toast.warning{border-left-color:var(--amarillo);}
+.toast-icon{font-size:1.3rem;}
+.toast-msg{font-size:0.88rem;font-weight:600;flex:1;}
+@keyframes toastIn{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;};}
+
+/* Modal de confirmación de cierre */
+.modal-confirma{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);
+  z-index:1500;align-items:center;justify-content:center;padding:20px;
+}
+.modal-confirma.active{display:flex;}
+.confirm-box{
+  background:#fff;border-radius:var(--radio-lg);padding:28px;
+  max-width:360px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);
+}
+.confirm-icon{font-size:2.5rem;margin-bottom:12px;}
+.confirm-titulo{font-size:1.1rem;font-weight:800;margin-bottom:8px;}
+.confirm-msg{font-size:0.88rem;color:var(--gris-dark);margin-bottom:20px;line-height:1.5;}
+.confirm-actions{display:flex;gap:10px;}
+.btn-confirm-cancel{
+  flex:1;padding:12px;background:var(--gris-light);color:var(--negro);
+  border:none;border-radius:var(--radio);font-weight:700;font-size:0.9rem;
+}
+.btn-confirm-ok{
+  flex:1;padding:12px;background:var(--rojo);color:#fff;
+  border:none;border-radius:var(--radio);font-weight:700;font-size:0.9rem;
+}
+
+/* Loading spinner inline */
+.spinner{
+  display:inline-block;width:16px;height:16px;
+  border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;
+  border-radius:50%;animation:spin 0.7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)};}
+
+/* Empty state */
+.empty-state{
+  text-align:center;padding:40px 20px;color:var(--gris);
+}
+.empty-state .empty-icon{font-size:3rem;margin-bottom:12px;}
+.empty-state p{font-size:0.9rem;}
+
+/* Mapa */
+#mapa-container{
+  display:none;height:300px;border-radius:var(--radio);
+  overflow:hidden;margin-top:12px;border:2px solid var(--gris-light);
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SPLASH
+══════════════════════════════════════════ -->
+<div id="splash">
+  <img src="logo.png" alt="TEC" onerror="this.style.display='none'"/>
+  <h1>Transporte TEC</h1>
+  <p>Registro Diario de Conductores</p>
+  <div class="loader"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     LOGIN
+══════════════════════════════════════════ -->
+<div id="login-screen" style="display:none;flex-direction:column;min-height:100vh;align-items:center;justify-content:center;background:linear-gradient(135deg,#922b21 0%,#c0392b 60%,#e74c3c 100%);padding:20px;">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="logo.png" alt="TEC" onerror="this.style.display='none'"/>
+      <h2>Transporte TEC</h2>
+      <p>Ingresa con tu usuario para continuar</p>
+    </div>
+    <div class="form-group">
+      <label>Usuario</label>
+      <select id="login-usuario">
+        <option value="">— Selecciona usuario —</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="Ingresa tu contraseña" autocomplete="current-password"/>
+    </div>
+    <button class="btn-login" id="btn-login" onclick="hacerLogin()">Ingresar</button>
+    <div class="login-error" id="login-error">Usuario o contraseña incorrectos</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     APP PRINCIPAL
+══════════════════════════════════════════ -->
+<div id="app" style="display:none;flex-direction:column;min-height:100vh;">
+
+  <!-- HEADER -->
+  <div class="app-header">
+    <div class="header-top">
+      <div class="header-brand">
+        <img src="logo.png" alt="TEC" onerror="this.style.display='none'"/>
+        <div class="brand-text">
+          <h1>Transporte TEC</h1>
+          <p>Registro Diario</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon btn-rojo" onclick="abrirFacturasEnRuta()">📋 Facturas en ruta</button>
+        <button class="btn-icon btn-outline" onclick="sincronizarPendientes()">🔄 Sincronizar</button>
+      </div>
+    </div>
+
+    <!-- USER BAR -->
+    <div class="user-bar">
+      <div class="user-info">
+        <div class="user-avatar" id="user-avatar">A</div>
+        <div>
+          <div class="user-name" id="user-name-display">—</div>
+          <span class="user-rol" id="user-rol-display">—</span>
+        </div>
+      </div>
+      <div class="sync-status">
+        <div class="status-item">Estado: <span id="sync-estado">Verificando...</span></div>
+        <div class="status-item">Pendientes: <span class="badge-pendientes" id="sync-pendientes">0</span></div>
+        <button class="btn-icon btn-outline" style="font-size:0.75rem;padding:6px 10px;" onclick="cerrarSesion()">Cerrar sesión</button>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" onclick="mostrarSeccion('registro',this)">📝 Registro</button>
+      <button class="nav-tab" onclick="mostrarSeccion('facturas',this)">📦 Despachos</button>
+      <button class="nav-tab" onclick="mostrarSeccion('historial',this)">📊 Historial</button>
+      <button class="nav-tab admin-only" onclick="mostrarSeccion('admin',this)" style="display:none;">⚙️ Admin</button>
+    </nav>
+  </div>
+
+  <!-- CONTENIDO -->
+  <div class="app-content">
+
+    <!-- ── SECCIÓN REGISTRO ── -->
+    <div id="sec-registro">
+      <div class="seccion-titulo">Registro del conductor</div>
+      <div class="seccion-sub">Inicia el turno, fija el kilometraje inicial y luego cierra la jornada en el mismo formulario.</div>
+
+      <div class="card">
+        <div class="card-titulo">📋 Datos del turno</div>
+        <div class="grid-2">
+          <div class="campo">
+            <label>Fecha</label>
+            <input type="date" id="reg-fecha"/>
+          </div>
+          <div class="campo">
+            <label>Unidad</label>
+            <select id="reg-unidad">
+              <option value="">Selecciona</option>
+              <option>Furgón 1</option>
+              <option>Furgón 2</option>
+              <option>Furgón 3</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Patente</label>
+            <input type="text" id="reg-patente" placeholder="Ej: ABCD-12"/>
+          </div>
+          <div class="campo">
+            <label>Peoneta acompañante</label>
+            <select id="reg-peoneta">
+              <option value="">Sin peoneta</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Conductor responsable</label>
+            <select id="reg-conductor">
+              <option value="">Selecciona</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Turno</label>
+            <select id="reg-turno">
+              <option value="">Selecciona</option>
+              <option>Mañana</option>
+              <option>Tarde</option>
+              <option>Noche</option>
+              <option>Completo</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="campo">
+          <label>Transportes visitados</label>
+          <div class="checkgroup">
+            <label class="check-item">
+              <input type="checkbox" id="trans-centro" value="Centro"/> Transportes Centro
+            </label>
+            <label class="check-item">
+              <input type="checkbox" id="trans-norte" value="Norte"/> Transportes Norte
+            </label>
+            <label class="check-item">
+              <input type="checkbox" id="trans-sur" value="Sur"/> Transportes Sur
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-titulo">🚗 Kilometraje</div>
+        <div class="grid-2">
+          <div class="campo">
+            <label>Kilometraje inicial</label>
+            <div class="km-group">
+              <input type="number" id="reg-km-inicial" placeholder="Ej: 45230" min="0"/>
+              <button class="btn-fijar" id="btn-fijar-km" onclick="fijarKm()">Fijar</button>
+            </div>
+            <div class="km-hint" id="km-hint">Debes fijar este valor antes de salir a ruta.</div>
+          </div>
+          <div class="campo">
+            <label>Kilometraje final</label>
+            <input type="number" id="reg-km-final" placeholder="Se habilita al fijar inicial" min="0" disabled/>
+            <div class="km-hint">Se habilita cuando el kilometraje inicial queda fijado.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-titulo">🔧 Estado del vehículo</div>
+        <div class="grid-2">
+          <div class="campo">
+            <label>Estado del vehículo</label>
+            <select id="reg-estado-vehiculo">
+              <option value="">Selecciona</option>
+              <option>Óptimo</option>
+              <option>Con observaciones menores</option>
+              <option>Requiere mantención</option>
+              <option>Fuera de servicio</option>
+            </select>
+          </div>
+        </div>
+        <div class="campo">
+          <label>Observación del estado del vehículo</label>
+          <textarea id="reg-observacion" placeholder="Incidentes, mantenciones, daños, atrasos o comentarios relevantes"></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-titulo">✅ Checklist rápido</div>
+        <div class="checklist-grid">
+          <label class="check-box">
+            <input type="checkbox" id="chk-neumaticos"/>
+            <span>🛞 Neumáticos</span>
+          </label>
+          <label class="check-box">
+            <input type="checkbox" id="chk-luces"/>
+            <span>💡 Luces</span>
+          </label>
+          <label class="check-box">
+            <input type="checkbox" id="chk-documentos"/>
+            <span>📄 Documentos</span>
+          </label>
+          <label class="check-box">
+            <input type="checkbox" id="chk-extintor"/>
+            <span>🧯 Extintor</span>
+          </label>
+          <label class="check-box">
+            <input type="checkbox" id="chk-botiquin"/>
+            <span>🩹 Botiquín</span>
+          </label>
+          <label class="check-box">
+            <input type="checkbox" id="chk-frenos"/>
+            <span>🛑 Frenos</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="btn-actions">
+        <button class="btn-guardar-avance" onclick="guardarAvance()">💾 Guardar avance</button>
+        <button class="btn-cerrar-turno" id="btn-cerrar-turno" onclick="pedirConfirmarCierre()">
+          🔒 Cerrar turno y enviar
+        </button>
+      </div>
+    </div>
+
+    <!-- ── SECCIÓN FACTURAS ── -->
+    <div id="sec-facturas" style="display:none;">
+      <div class="seccion-titulo">Despachos en ruta</div>
+      <div class="seccion-sub">Gestiona las facturas asignadas al turno activo. Marca cada entrega con georeferenciación.</div>
+
+      <div id="sin-registro-activo" class="card" style="text-align:center;padding:30px;">
+        <div style="font-size:2.5rem;margin-bottom:12px;">📋</div>
+        <div style="font-weight:700;margin-bottom:8px;">No hay turno activo</div>
+        <div style="font-size:0.85rem;color:var(--gris);">Primero crea un registro en la pestaña "Registro" y guarda el turno.</div>
+      </div>
+
+      <div id="facturas-content" style="display:none;">
+        <div class="facturas-toolbar">
+          <button class="btn-agregar-factura" onclick="abrirModalFactura()">+ Agregar factura</button>
+          <button class="btn-icon btn-outline" onclick="importarFacturas()">📤 Importar lista</button>
+          <span style="font-size:0.82rem;color:var(--gris);margin-left:auto;" id="resumen-facturas">0 facturas</span>
+        </div>
+        <div id="lista-facturas">
+          <div class="empty-state">
+            <div class="empty-icon">📦</div>
+            <p>Aún no hay facturas para este turno.<br/>Agrégalas con el botón de arriba.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECCIÓN HISTORIAL ── -->
+    <div id="sec-historial" style="display:none;">
+      <div class="seccion-titulo">Historial de registros</div>
+      <div class="seccion-sub">Consulta todos los turnos registrados. Solo admins pueden ver registros de otros conductores.</div>
+      <div class="historial-toolbar">
+        <input type="date" id="hist-fecha-inicio" placeholder="Desde"/>
+        <input type="date" id="hist-fecha-fin" placeholder="Hasta"/>
+        <input type="text" id="hist-buscar" placeholder="🔍 Buscar conductor, patente…" oninput="filtrarHistorial()"/>
+        <button class="btn-exportar" onclick="exportarCSV()">⬇️ CSV</button>
+        <button class="btn-icon btn-rojo" onclick="cargarHistorial()">🔄 Actualizar</button>
+      </div>
+      <div class="tabla-wrapper">
+        <table id="tabla-historial">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Conductor</th>
+              <th>Unidad</th>
+              <th>Patente</th>
+              <th>Km Ini</th>
+              <th>Km Fin</th>
+              <th>Estado</th>
+              <th>Facturas</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-historial">
+            <tr><td colspan="8" style="text-align:center;color:var(--gris);padding:30px;">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── SECCIÓN ADMIN ── -->
+    <div id="sec-admin" style="display:none;">
+      <div class="seccion-titulo">Panel de administración</div>
+      <div class="seccion-sub">Solo visible para usuarios con rol administrador.</div>
+      <div class="card">
+        <div class="card-titulo">👥 Gestión de usuarios</div>
+        <p style="font-size:0.85rem;color:var(--gris);">Módulo disponible próximamente. Contacta al administrador del sistema para modificar usuarios.</p>
+      </div>
+      <div class="card">
+        <div class="card-titulo">📊 Resumen del día</div>
+        <div id="resumen-admin" style="font-size:0.88rem;color:var(--gris);">Cargando resumen…</div>
+      </div>
+    </div>
+
+  </div><!-- /app-content -->
+</div><!-- /app -->
+
+<!-- ══════════════════════════════════════════
+     MODAL: AGREGAR FACTURA
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-factura">
+  <div class="modal-box">
+    <div class="modal-titulo">📦 Agregar factura al despacho</div>
+    <div class="campo">
+      <label>N° de Factura *</label>
+      <input type="text" id="fac-numero" placeholder="Ej: 12345"/>
+    </div>
+    <div class="campo">
+      <label>Cliente</label>
+      <input type="text" id="fac-cliente" placeholder="Nombre del cliente"/>
+    </div>
+    <div class="campo">
+      <label>Dirección de entrega</label>
+      <input type="text" id="fac-direccion" placeholder="Calle y número"/>
+    </div>
+    <div class="grid-2">
+      <div class="campo">
+        <label>Comuna</label>
+        <input type="text" id="fac-comuna" placeholder="Ej: Providencia"/>
+      </div>
+      <div class="campo">
+        <label>Teléfono</label>
+        <input type="tel" id="fac-telefono" placeholder="+56 9..."/>
+      </div>
+    </div>
+    <div class="campo">
+      <label>Observaciones</label>
+      <textarea id="fac-obs" placeholder="Instrucciones especiales, horarios, etc." style="min-height:60px;"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="cerrarModalFactura()">Cancelar</button>
+      <button class="btn-modal-ok" onclick="agregarFactura()">Agregar factura</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL: IMPORTAR FACTURAS (CSV/texto)
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-importar">
+  <div class="modal-box">
+    <div class="modal-titulo">📤 Importar lista de facturas</div>
+    <p style="font-size:0.83rem;color:var(--gris);margin-bottom:12px;">Pega una lista de números de factura separados por coma, punto y coma o línea nueva.</p>
+    <div class="campo">
+      <label>Lista de facturas</label>
+      <textarea id="import-lista" placeholder="12345, 12346, 12347&#10;o una por línea" style="min-height:120px;"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="cerrarModalImportar()">Cancelar</button>
+      <button class="btn-modal-ok" onclick="procesarImportacion()">Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL: CONFIRMAR CIERRE TURNO
+══════════════════════════════════════════ -->
+<div class="modal-confirma" id="modal-confirma">
+  <div class="confirm-box">
+    <div class="confirm-icon">🔒</div>
+    <div class="confirm-titulo">¿Cerrar turno?</div>
+    <div class="confirm-msg" id="confirm-msg">
+      Esta acción enviará el registro completo. Una vez cerrado no podrás editar el formulario.
+    </div>
+    <div class="confirm-actions">
+      <button class="btn-confirm-cancel" onclick="cerrarConfirma()">Cancelar</button>
+      <button class="btn-confirm-ok" id="btn-confirm-ok" onclick="cerrarTurno()">Confirmar cierre</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════ -->
+<script>
+// ════════════════════════════════════════
+// CONFIGURACIÓN — EDITA ESTOS VALORES
+// ════════════════════════════════════════
+const CONFIG = {
+  SUPABASE_URL: 'https://bpepsrrznvsshzeqxojp.supabase.co',
+  SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwZXBzcnJ6bnZzc2h6ZXF4b2pwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTQzMzAsImV4cCI6MjA5MzU3MDMzMH0.tbE_LgOcZtgAkRxOzg4xRXf7ec7o1mPkCp3I9yDz5e8',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/TU_SCRIPT_ID/exec', // ← Reemplaza
+};
+
+// ════════════════════════════════════════
+// USUARIOS (se cargan desde Supabase, estos son fallback)
+// ════════════════════════════════════════
+const USUARIOS_DEFAULT = [
+  { nombre: 'Administrador TEC', password: 'tec2024', rol: 'admin' },
+  { nombre: 'Juan Pérez',        password: 'tec2024', rol: 'admin' },
+  { nombre: 'María González',    password: 'tec2024', rol: 'admin' },
+  { nombre: 'Carlos Rojas',      password: 'tec2024', rol: 'admin' },
+  { nombre: 'Pedro Soto',        password: 'tec2024', rol: 'operativo' },
+  { nombre: 'Luis Muñoz',        password: 'tec2024', rol: 'operativo' },
+  { nombre: 'Felipe Díaz',       password: 'tec2024', rol: 'operativo' },
+];
+
+// ════════════════════════════════════════
+// ESTADO GLOBAL
+// ════════════════════════════════════════
+let ESTADO = {
+  usuario: null,
+  registroActual: null,
+  kmFijado: false,
+  facturas: [],
+  historial: [],
+  pendientes: [],
+  online: navigator.onLine,
+};
+
+// ════════════════════════════════════════
+// SUPABASE HELPERS
+// ════════════════════════════════════════
+const sb = {
+  headers: () => ({
+    'apikey': CONFIG.SUPABASE_KEY,
+    'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation',
+  }),
+
+  async get(tabla, filtros = '') {
+    try {
+      const r = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/${tabla}?${filtros}`, {
+        headers: sb.headers()
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return await r.json();
+    } catch (e) { console.error('[SB GET]', e); return null; }
+  },
+
+  async post(tabla, data) {
+    try {
+      const r = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/${tabla}`, {
+        method: 'POST',
+        headers: sb.headers(),
+        body: JSON.stringify(data),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return await r.json();
+    } catch (e) { console.error('[SB POST]', e); return null; }
+  },
+
+  async patch(tabla, id, data) {
+    try {
+      const r = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/${tabla}?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: { ...sb.headers(), 'Prefer': 'return=representation' },
+        body: JSON.stringify(data),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return await r.json();
+    } catch (e) { console.error('[SB PATCH]', e); return null; }
+  },
+};
+
+// ════════════════════════════════════════
+// HASH PASSWORD (SHA-256 simple)
+// ════════════════════════════════════════
+async function hashPassword(pw) {
+  const msgBuffer = new TextEncoder().encode(pw);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ════════════════════════════════════════
+// SPLASH → LOGIN / APP
+// ════════════════════════════════════════
+window.addEventListener('load', () => {
+  cargarSelectoresLogin();
+  const sesion = localStorage.getItem('tec_sesion');
+  if (sesion) {
+    try {
+      ESTADO.usuario = JSON.parse(sesion);
+      setTimeout(() => {
+        document.getElementById('splash').style.opacity = '0';
+        setTimeout(() => {
+          document.getElementById('splash').style.display = 'none';
+          iniciarApp();
+        }, 600);
+      }, 1200);
+    } catch {
+      localStorage.removeItem('tec_sesion');
+      mostrarLogin();
+    }
+  } else {
+    setTimeout(() => {
+      document.getElementById('splash').style.opacity = '0';
+      setTimeout(() => {
+        document.getElementById('splash').style.display = 'none';
+        mostrarLogin();
+      }, 600);
+    }, 1500);
+  }
+});
+
+function mostrarLogin() {
+  const ls = document.getElementById('login-screen');
+  ls.style.display = 'flex';
+}
+
+function cargarSelectoresLogin() {
+  const sel = document.getElementById('login-usuario');
+  USUARIOS_DEFAULT.forEach(u => {
+    const op = document.createElement('option');
+    op.value = u.nombre;
+    op.textContent = u.nombre;
+    sel.appendChild(op);
+  });
+}
+
+async function hacerLogin() {
+  const nombre = document.getElementById('login-usuario').value;
+  const pw = document.getElementById('login-pass').value;
+  const errDiv = document.getElementById('login-error');
+  const btn = document.getElementById('btn-login');
+
+  if (!nombre || !pw) { errDiv.textContent = 'Selecciona usuario e ingresa contraseña.'; errDiv.style.display='block'; return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Verificando…';
+  errDiv.style.display = 'none';
+
+  // Intentar verificar contra Supabase
+  let usuario = null;
+  try {
+    const hash = await hashPassword(pw);
+    const data = await sb.get('usuarios', `nombre=eq.${encodeURIComponent(nombre)}&activo=eq.true`);
+    if (data && data.length > 0) {
+      usuario = data[0]; // En producción verificar hash
+    }
+  } catch {}
+
+  // Fallback local si Supabase falla
+  if (!usuario) {
+    usuario = USUARIOS_DEFAULT.find(u => u.nombre === nombre && u.password === pw);
+  }
+
+  if (usuario) {
+    ESTADO.usuario = {
+      id: usuario.id || null,
+      nombre: usuario.nombre,
+      rol: usuario.rol,
+    };
+    localStorage.setItem('tec_sesion', JSON.stringify(ESTADO.usuario));
+    document.getElementById('login-screen').style.display = 'none';
+    iniciarApp();
+  } else {
+    errDiv.textContent = 'Usuario o contraseña incorrectos.';
+    errDiv.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Ingresar';
+  }
+}
+
+document.getElementById('login-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') hacerLogin();
+});
+
+// ════════════════════════════════════════
+// INICIAR APP
+// ════════════════════════════════════════
+function iniciarApp() {
+  const app = document.getElementById('app');
+  app.style.display = 'flex';
+
+  // Datos de usuario en header
+  const u = ESTADO.usuario;
+  document.getElementById('user-name-display').textContent = u.nombre;
+  document.getElementById('user-rol-display').textContent = u.rol === 'admin' ? 'Administrador' : 'Operativo';
+  document.getElementById('user-avatar').textContent = u.nombre[0].toUpperCase();
+
+  // Mostrar tab admin si es admin
+  if (u.rol === 'admin') {
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+  }
+
+  // Setear fecha de hoy
+  document.getElementById('reg-fecha').value = new Date().toISOString().split('T')[0];
+
+  // Poblar conductores en el formulario
+  const selConductor = document.getElementById('reg-conductor');
+  const selPeoneta = document.getElementById('reg-peoneta');
+  USUARIOS_DEFAULT.forEach(u => {
+    [selConductor, selPeoneta].forEach(sel => {
+      const op = document.createElement('option');
+      op.value = u.nombre;
+      op.textContent = u.nombre;
+      sel.appendChild(op);
+    });
+  });
+
+  // Cargar registro pendiente del día
+  cargarRegistroPendiente();
+  verificarConexion();
+  cargarHistorial();
+
+  // Actualizar estado de conexión
+  window.addEventListener('online', () => { ESTADO.online = true; verificarConexion(); sincronizarPendientes(); });
+  window.addEventListener('offline', () => { ESTADO.online = false; verificarConexion(); });
+}
+
+function cerrarSesion() {
+  if (confirm('¿Cerrar sesión?')) {
+    localStorage.removeItem('tec_sesion');
+    location.reload();
+  }
+}
+
+// ════════════════════════════════════════
+// NAVEGACIÓN ENTRE SECCIONES
+// ════════════════════════════════════════
+function mostrarSeccion(id, tab) {
+  ['registro','facturas','historial','admin'].forEach(s => {
+    document.getElementById(`sec-${s}`).style.display = 'none';
+  });
+  document.getElementById(`sec-${id}`).style.display = 'block';
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  if (tab) tab.classList.add('active');
+
+  if (id === 'historial') cargarHistorial();
+  if (id === 'facturas') renderizarFacturas();
+  if (id === 'admin') cargarResumenAdmin();
+}
+
+// ════════════════════════════════════════
+// REGISTRO DEL CONDUCTOR
+// ════════════════════════════════════════
+async function cargarRegistroPendiente() {
+  // Buscar registro de hoy sin cerrar para este conductor
+  const hoy = new Date().toISOString().split('T')[0];
+  const cond = ESTADO.usuario.nombre;
+  const data = await sb.get('registros_conductor',
+    `fecha=eq.${hoy}&conductor=eq.${encodeURIComponent(cond)}&estado_registro=eq.abierto&order=created_at.desc&limit=1`
+  );
+  if (data && data.length > 0) {
+    ESTADO.registroActual = data[0];
+    cargarFormularioDesdeRegistro(data[0]);
+    toast('Turno activo recuperado 📋', 'info');
+  }
+}
+
+function cargarFormularioDesdeRegistro(r) {
+  if (!r) return;
+  document.getElementById('reg-fecha').value = r.fecha || '';
+  document.getElementById('reg-unidad').value = r.unidad || '';
+  document.getElementById('reg-patente').value = r.patente || '';
+  document.getElementById('reg-peoneta').value = r.peoneta || '';
+  document.getElementById('reg-conductor').value = r.conductor || '';
+  document.getElementById('reg-turno').value = r.turno || '';
+  document.getElementById('reg-km-inicial').value = r.kilometraje_inicial || '';
+  document.getElementById('reg-km-final').value = r.kilometraje_final || '';
+  document.getElementById('reg-estado-vehiculo').value = r.estado_vehiculo || '';
+  document.getElementById('reg-observacion').value = r.observacion || '';
+
+  if (r.kilometraje_inicial_fijado) {
+    fijarKmSilencioso(r.kilometraje_inicial);
+  }
+
+  const transportes = r.transportes_visitados || [];
+  document.getElementById('trans-centro').checked = transportes.includes('Centro');
+  document.getElementById('trans-norte').checked = transportes.includes('Norte');
+  document.getElementById('trans-sur').checked = transportes.includes('Sur');
+
+  const chk = r.checklist || {};
+  ['neumaticos','luces','documentos','extintor','botiquin','frenos'].forEach(k => {
+    const el = document.getElementById(`chk-${k}`);
+    if (el) el.checked = !!chk[k];
+  });
+
+  // Cargar facturas
+  cargarFacturasDelRegistro(r.id);
+}
+
+function obtenerDatosFormulario() {
+  const transportes = [];
+  if (document.getElementById('trans-centro').checked) transportes.push('Centro');
+  if (document.getElementById('trans-norte').checked) transportes.push('Norte');
+  if (document.getElementById('trans-sur').checked) transportes.push('Sur');
+
+  const checklist = {};
+  ['neumaticos','luces','documentos','extintor','botiquin','frenos'].forEach(k => {
+    checklist[k] = document.getElementById(`chk-${k}`).checked;
+  });
+
+  return {
+    fecha: document.getElementById('reg-fecha').value,
+    unidad: document.getElementById('reg-unidad').value,
+    patente: document.getElementById('reg-patente').value.toUpperCase(),
+    peoneta: document.getElementById('reg-peoneta').value || 'Sin peoneta',
+    conductor: document.getElementById('reg-conductor').value,
+    turno: document.getElementById('reg-turno').value,
+    transportes_visitados: transportes,
+    kilometraje_inicial: parseInt(document.getElementById('reg-km-inicial').value) || null,
+    kilometraje_inicial_fijado: ESTADO.kmFijado,
+    kilometraje_final: parseInt(document.getElementById('reg-km-final').value) || null,
+    estado_vehiculo: document.getElementById('reg-estado-vehiculo').value,
+    observacion: document.getElementById('reg-observacion').value,
+    checklist,
+    usuario_id: ESTADO.usuario.id,
+    usuario_nombre: ESTADO.usuario.nombre,
+  };
+}
+
+function validarFormulario(data, cerrar = false) {
+  if (!data.fecha) return 'Falta la fecha.';
+  if (!data.conductor) return 'Selecciona el conductor responsable.';
+  if (!data.unidad) return 'Selecciona la unidad (furgón).';
+  if (cerrar && !data.kilometraje_inicial) return 'El kilometraje inicial debe estar fijado.';
+  if (cerrar && !data.estado_vehiculo) return 'Selecciona el estado del vehículo.';
+  return null;
+}
+
+async function guardarAvance() {
+  const data = obtenerDatosFormulario();
+  const err = validarFormulario(data, false);
+  if (err) { toast(err, 'error'); return; }
+
+  const btn = document.querySelector('.btn-guardar-avance');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+
+  data.estado_registro = 'abierto';
+
+  let resultado;
+  if (ESTADO.registroActual) {
+    resultado = await sb.patch('registros_conductor', ESTADO.registroActual.id, data);
+    if (resultado && resultado.length > 0) ESTADO.registroActual = resultado[0];
+  } else {
+    resultado = await sb.post('registros_conductor', data);
+    if (resultado && resultado.length > 0) {
+      ESTADO.registroActual = resultado[0];
+    }
+  }
+
+  if (resultado) {
+    toast('✅ Avance guardado correctamente', 'success');
+    sincronizarASheets(ESTADO.registroActual, 'registro');
+  } else {
+    guardarPendienteLocal({ tipo: 'registro', data });
+    toast('⚠️ Guardado localmente (sin conexión)', 'warning');
+  }
+
+  btn.disabled = false; btn.textContent = '💾 Guardar avance';
+}
+
+// ════════════════════════════════════════
+// KILOMETRAJE
+// ════════════════════════════════════════
+function fijarKm() {
+  const val = parseInt(document.getElementById('reg-km-inicial').value);
+  if (!val || val < 0) { toast('Ingresa un kilometraje inicial válido', 'error'); return; }
+  fijarKmSilencioso(val);
+  toast(`Kilometraje inicial fijado: ${val.toLocaleString()} km`, 'success');
+}
+
+function fijarKmSilencioso(val) {
+  ESTADO.kmFijado = true;
+  document.getElementById('reg-km-inicial').value = val;
+  document.getElementById('reg-km-inicial').disabled = true;
+  document.getElementById('reg-km-final').disabled = false;
+  const btn = document.getElementById('btn-fijar-km');
+  btn.textContent = '✓ Fijado';
+  btn.classList.add('fijado');
+  btn.disabled = true;
+  document.getElementById('km-hint').textContent = `Fijado en ${val.toLocaleString()} km`;
+}
+
+// ════════════════════════════════════════
+// CIERRE DE TURNO
+// ════════════════════════════════════════
+function pedirConfirmarCierre() {
+  const data = obtenerDatosFormulario();
+  const err = validarFormulario(data, true);
+  if (err) { toast(err, 'error'); return; }
+
+  const facs = ESTADO.facturas.length;
+  const entregadas = ESTADO.facturas.filter(f => f.estado === 'entregado').length;
+  document.getElementById('confirm-msg').innerHTML =
+    `Facturas: <strong>${entregadas}/${facs}</strong> entregadas.<br/>
+     Km recorridos: <strong>${(data.kilometraje_final||0) - (data.kilometraje_inicial||0)} km</strong>.<br/>
+     Una vez cerrado no podrás editar el formulario.`;
+
+  document.getElementById('modal-confirma').classList.add('active');
+}
+
+function cerrarConfirma() {
+  document.getElementById('modal-confirma').classList.remove('active');
+}
+
+async function cerrarTurno() {
+  const btn = document.getElementById('btn-confirm-ok');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Enviando…';
+
+  const data = obtenerDatosFormulario();
+  data.estado_registro = 'cerrado';
+
+  let ok = false;
+  if (ESTADO.registroActual) {
+    const r = await sb.patch('registros_conductor', ESTADO.registroActual.id, data);
+    if (r) { ESTADO.registroActual = r[0]; ok = true; }
+  } else {
+    const r = await sb.post('registros_conductor', data);
+    if (r) { ESTADO.registroActual = r[0]; ok = true; }
+  }
+
+  cerrarConfirma();
+
+  if (ok) {
+    toast('🎉 Turno cerrado y enviado correctamente', 'success');
+    sincronizarASheets(ESTADO.registroActual, 'registro');
+    // Bloquear formulario
+    document.getElementById('btn-cerrar-turno').disabled = true;
+    document.getElementById('btn-cerrar-turno').textContent = '✓ Turno cerrado';
+    limpiarFormularioDespues();
+    cargarHistorial();
+  } else {
+    guardarPendienteLocal({ tipo: 'cierre', data });
+    toast('⚠️ Guardado localmente, se enviará al recuperar conexión', 'warning');
+  }
+
+  btn.disabled = false; btn.textContent = 'Confirmar cierre';
+}
+
+function limpiarFormularioDespues() {
+  setTimeout(() => {
+    // Resetear para nuevo turno
+    ESTADO.registroActual = null;
+    ESTADO.kmFijado = false;
+    ESTADO.facturas = [];
+    document.getElementById('btn-cerrar-turno').disabled = false;
+    document.getElementById('btn-cerrar-turno').textContent = '🔒 Cerrar turno y enviar';
+    document.getElementById('btn-fijar-km').textContent = 'Fijar';
+    document.getElementById('btn-fijar-km').classList.remove('fijado');
+    document.getElementById('btn-fijar-km').disabled = false;
+    document.getElementById('reg-km-inicial').disabled = false;
+    document.getElementById('reg-km-final').disabled = true;
+    document.getElementById('reg-km-final').value = '';
+    document.getElementById('reg-km-inicial').value = '';
+    document.getElementById('reg-observacion').value = '';
+    document.getElementById('reg-estado-vehiculo').value = '';
+    document.querySelectorAll('.check-box input, .check-item input').forEach(c => c.checked = false);
+    document.getElementById('reg-fecha').value = new Date().toISOString().split('T')[0];
+    document.getElementById('km-hint').textContent = 'Debes fijar este valor antes de salir a ruta.';
+  }, 2000);
+}
+
+// ════════════════════════════════════════
+// FACTURAS / DESPACHOS
+// ════════════════════════════════════════
+async function cargarFacturasDelRegistro(registroId) {
+  if (!registroId) return;
+  const data = await sb.get('facturas_despacho',
+    `registro_id=eq.${registroId}&order=orden_entrega.asc`
+  );
+  if (data) {
+    ESTADO.facturas = data;
+    renderizarFacturas();
+  }
+}
+
+function renderizarFacturas() {
+  const sinReg = document.getElementById('sin-registro-activo');
+  const content = document.getElementById('facturas-content');
+
+  if (!ESTADO.registroActual) {
+    sinReg.style.display = 'block';
+    content.style.display = 'none';
+    return;
+  }
+  sinReg.style.display = 'none';
+  content.style.display = 'block';
+
+  const lista = document.getElementById('lista-facturas');
+  const total = ESTADO.facturas.length;
+  const entregadas = ESTADO.facturas.filter(f => f.estado === 'entregado').length;
+  document.getElementById('resumen-facturas').textContent =
+    `${total} facturas · ${entregadas} entregadas`;
+
+  if (total === 0) {
+    lista.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div>
+      <p>Aún no hay facturas para este turno.<br/>Agrégalas con el botón de arriba.</p></div>`;
+    return;
+  }
+
+  lista.innerHTML = ESTADO.facturas.map((f, i) => `
+    <div class="factura-card ${f.estado}" id="fcard-${f.id||i}">
+      <div class="factura-header">
+        <div class="factura-num">Factura #${f.numero_factura}</div>
+        <div class="factura-estado estado-${f.estado}">${estadoLabel(f.estado)}</div>
+      </div>
+      <div class="factura-info">
+        ${f.cliente ? `<strong>👤</strong> ${f.cliente}<br/>` : ''}
+        ${f.direccion ? `<strong>📍</strong> ${f.direccion}${f.comuna ? ', ' + f.comuna : ''}<br/>` : ''}
+        ${f.telefono ? `<strong>📞</strong> ${f.telefono}<br/>` : ''}
+        ${f.observacion_entrega ? `<em>${f.observacion_entrega}</em><br/>` : ''}
+      </div>
+      ${f.lat_entrega ? `<div class="geo-badge">📍 Georeferenciado ${f.timestamp_geo ? new Date(f.timestamp_geo).toLocaleTimeString('es-CL') : ''}</div>` : ''}
+      <div class="factura-actions">
+        ${f.estado !== 'entregado' ? `<button class="btn-geo btn-geo-entregar" onclick="cerrarTareaFactura('${f.id||i}','entregado')">✅ Entregado</button>` : ''}
+        ${f.estado !== 'no_entregado' ? `<button class="btn-geo btn-geo-noentregar" onclick="cerrarTareaFactura('${f.id||i}','no_entregado')">❌ No entregado</button>` : ''}
+        ${f.estado !== 'reagendado' ? `<button class="btn-geo btn-geo-reagendar" onclick="cerrarTareaFactura('${f.id||i}','reagendado')">🗓 Reagendar</button>` : ''}
+        ${f.lat_entrega ? `<button class="btn-geo btn-geo-mapa" onclick="verEnMapa(${f.lat_entrega},${f.lng_entrega})">🗺 Ver mapa</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function estadoLabel(e) {
+  return {pendiente:'Pendiente',entregado:'✅ Entregado',no_entregado:'❌ No entregado',reagendado:'🗓 Reagendado'}[e] || e;
+}
+
+function abrirFacturasEnRuta() {
+  mostrarSeccion('facturas', document.querySelectorAll('.nav-tab')[1]);
+}
+
+function abrirModalFactura() {
+  document.getElementById('modal-factura').classList.add('active');
+  document.getElementById('fac-numero').focus();
+}
+
+function cerrarModalFactura() {
+  document.getElementById('modal-factura').classList.remove('active');
+  ['fac-numero','fac-cliente','fac-direccion','fac-comuna','fac-telefono','fac-obs']
+    .forEach(id => document.getElementById(id).value = '');
+}
+
+async function agregarFactura() {
+  const num = document.getElementById('fac-numero').value.trim();
+  if (!num) { toast('Ingresa el número de factura', 'error'); return; }
+  if (!ESTADO.registroActual) { toast('Primero guarda el turno', 'error'); return; }
+
+  const factura = {
+    registro_id: ESTADO.registroActual.id,
+    numero_factura: num,
+    cliente: document.getElementById('fac-cliente').value,
+    direccion: document.getElementById('fac-direccion').value,
+    comuna: document.getElementById('fac-comuna').value,
+    telefono: document.getElementById('fac-telefono').value,
+    observacion_entrega: document.getElementById('fac-obs').value,
+    estado: 'pendiente',
+    orden_entrega: ESTADO.facturas.length + 1,
+  };
+
+  const r = await sb.post('facturas_despacho', factura);
+  if (r && r.length > 0) {
+    ESTADO.facturas.push(r[0]);
+    toast(`Factura #${num} agregada`, 'success');
+    sincronizarASheets(r[0], 'factura');
+  } else {
+    // Agregar localmente con ID temporal
+    factura.id = 'local_' + Date.now();
+    ESTADO.facturas.push(factura);
+    toast(`Factura #${num} guardada localmente`, 'warning');
+  }
+
+  cerrarModalFactura();
+  renderizarFacturas();
+}
+
+function importarFacturas() {
+  document.getElementById('modal-importar').classList.add('active');
+}
+
+function cerrarModalImportar() {
+  document.getElementById('modal-importar').classList.remove('active');
+  document.getElementById('import-lista').value = '';
+}
+
+async function procesarImportacion() {
+  const texto = document.getElementById('import-lista').value.trim();
+  if (!texto) { toast('Ingresa al menos un número de factura', 'error'); return; }
+  if (!ESTADO.registroActual) { toast('Primero guarda el turno', 'error'); return; }
+
+  const numeros = texto.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+  let agregados = 0;
+  for (const num of numeros) {
+    if (ESTADO.facturas.find(f => f.numero_factura === num)) continue;
+    const fac = {
+      registro_id: ESTADO.registroActual.id,
+      numero_factura: num,
+      estado: 'pendiente',
+      orden_entrega: ESTADO.facturas.length + 1,
+    };
+    const r = await sb.post('facturas_despacho', fac);
+    if (r && r.length > 0) { ESTADO.facturas.push(r[0]); agregados++; }
+    else { fac.id = 'local_' + Date.now(); ESTADO.facturas.push(fac); agregados++; }
+  }
+
+  cerrarModalImportar();
+  renderizarFacturas();
+  toast(`${agregados} facturas importadas`, 'success');
+}
+
+// ════════════════════════════════════════
+// GEOREFERENCIACIÓN AL CERRAR TAREA
+// ════════════════════════════════════════
+async function cerrarTareaFactura(facturaId, nuevoEstado) {
+  const factura = ESTADO.facturas.find(f => (f.id||'') == facturaId);
+  if (!factura) return;
+
+  toast('📍 Obteniendo ubicación…', 'info');
+
+  try {
+    const pos = await obtenerGeolocalizacion();
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const ts = new Date().toISOString();
+
+    const update = {
+      estado: nuevoEstado,
+      lat_entrega: lat,
+      lng_entrega: lng,
+      timestamp_geo: ts,
+    };
+
+    // Actualizar en Supabase si tiene ID real
+    if (!facturaId.toString().startsWith('local_')) {
+      const r = await sb.patch('facturas_despacho', facturaId, update);
+      if (r) {
+        const idx = ESTADO.facturas.findIndex(f => f.id == facturaId);
+        if (idx >= 0) ESTADO.facturas[idx] = { ...ESTADO.facturas[idx], ...update };
+        sincronizarASheets({ ...factura, ...update }, 'factura');
+      }
+    } else {
+      // Solo actualizar localmente
+      const idx = ESTADO.facturas.findIndex(f => f.id == facturaId);
+      if (idx >= 0) ESTADO.facturas[idx] = { ...ESTADO.facturas[idx], ...update };
+    }
+
+    toast(`📍 ${estadoLabel(nuevoEstado)} — Ubicación registrada`, 'success');
+    renderizarFacturas();
+  } catch (e) {
+    toast('⚠️ No se pudo obtener ubicación: ' + (e.message || 'Permiso denegado'), 'warning');
+    // Actualizar estado sin geo
+    const update = { estado: nuevoEstado };
+    if (!facturaId.toString().startsWith('local_')) {
+      await sb.patch('facturas_despacho', facturaId, update);
+    }
+    const idx = ESTADO.facturas.findIndex(f => f.id == facturaId);
+    if (idx >= 0) ESTADO.facturas[idx] = { ...ESTADO.facturas[idx], ...update };
+    renderizarFacturas();
+  }
+}
+
+function obtenerGeolocalizacion() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) { reject(new Error('Geolocalización no disponible')); return; }
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true, timeout: 10000, maximumAge: 0
+    });
+  });
+}
+
+function verEnMapa(lat, lng) {
+  window.open(`https://maps.google.com/?q=${lat},${lng}`, '_blank');
+}
+
+// ════════════════════════════════════════
+// HISTORIAL
+// ════════════════════════════════════════
+async function cargarHistorial() {
+  const tbody = document.getElementById('tbody-historial');
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--gris);padding:20px;">Cargando…</td></tr>';
+
+  let filtro = 'order=fecha.desc&limit=100';
+  if (ESTADO.usuario?.rol !== 'admin') {
+    filtro += `&conductor=eq.${encodeURIComponent(ESTADO.usuario.nombre)}`;
+  }
+
+  const data = await sb.get('registros_conductor', filtro);
+  if (!data) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--gris);">Error al cargar</td></tr>';
+    return;
+  }
+
+  ESTADO.historial = data;
+  renderizarTablaHistorial(data);
+}
+
+function renderizarTablaHistorial(registros) {
+  const tbody = document.getElementById('tbody-historial');
+  if (!registros || registros.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--gris);padding:20px;">Sin registros</td></tr>';
+    return;
+  }
+  tbody.innerHTML = registros.map(r => `
+    <tr>
+      <td>${r.fecha}</td>
+      <td>${r.conductor || '—'}</td>
+      <td>${r.unidad || '—'}</td>
+      <td>${r.patente || '—'}</td>
+      <td>${r.kilometraje_inicial?.toLocaleString() || '—'}</td>
+      <td>${r.kilometraje_final?.toLocaleString() || '—'}</td>
+      <td><span class="tag tag-${r.estado_registro}">${r.estado_registro}</span></td>
+      <td>—</td>
+    </tr>
+  `).join('');
+}
+
+function filtrarHistorial() {
+  const buscar = document.getElementById('hist-buscar').value.toLowerCase();
+  const filtrados = ESTADO.historial.filter(r =>
+    (r.conductor||'').toLowerCase().includes(buscar) ||
+    (r.patente||'').toLowerCase().includes(buscar) ||
+    (r.unidad||'').toLowerCase().includes(buscar)
+  );
+  renderizarTablaHistorial(filtrados);
+}
+
+function exportarCSV() {
+  const headers = ['Fecha','Conductor','Unidad','Patente','Km Inicial','Km Final','Estado','Creado'];
+  const filas = ESTADO.historial.map(r => [
+    r.fecha, r.conductor, r.unidad, r.patente,
+    r.kilometraje_inicial, r.kilometraje_final,
+    r.estado_registro, r.created_at
+  ].map(v => `"${v||''}"`).join(','));
+
+  const csv = [headers.join(','), ...filas].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Transporte_TEC_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('📊 CSV exportado', 'success');
+}
+
+// ════════════════════════════════════════
+// SINCRONIZACIÓN CON GOOGLE SHEETS
+// ════════════════════════════════════════
+async function sincronizarASheets(data, tipo) {
+  if (!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.includes('TU_SCRIPT')) return;
+  try {
+    await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tipo, data }),
+    });
+    if (ESTADO.registroActual) {
+      await sb.patch('registros_conductor', ESTADO.registroActual.id, { sincronizado_sheets: true });
+    }
+  } catch (e) {
+    console.warn('[Sheets] Error sincronizando:', e);
+  }
+}
+
+// ════════════════════════════════════════
+// PENDIENTES LOCALES (OFFLINE)
+// ════════════════════════════════════════
+function guardarPendienteLocal(item) {
+  const pendientes = JSON.parse(localStorage.getItem('tec_pendientes') || '[]');
+  pendientes.push({ ...item, ts: Date.now() });
+  localStorage.setItem('tec_pendientes', JSON.stringify(pendientes));
+  actualizarBadgePendientes();
+}
+
+async function sincronizarPendientes() {
+  if (!ESTADO.online) { toast('Sin conexión a internet', 'warning'); return; }
+  const pendientes = JSON.parse(localStorage.getItem('tec_pendientes') || '[]');
+  if (pendientes.length === 0) { toast('Sin datos pendientes', 'info'); return; }
+
+  let sincronizados = 0;
+  const restantes = [];
+  for (const p of pendientes) {
+    try {
+      let ok = false;
+      if (p.tipo === 'registro' || p.tipo === 'cierre') {
+        const r = await sb.post('registros_conductor', p.data);
+        if (r) { ok = true; sincronizarASheets(r[0], 'registro'); }
+      }
+      if (!ok) restantes.push(p);
+      else sincronizados++;
+    } catch { restantes.push(p); }
+  }
+
+  localStorage.setItem('tec_pendientes', JSON.stringify(restantes));
+  actualizarBadgePendientes();
+
+  if (sincronizados > 0) toast(`✅ ${sincronizados} registros sincronizados`, 'success');
+  else toast('No se pudo sincronizar aún', 'warning');
+}
+
+function actualizarBadgePendientes() {
+  const p = JSON.parse(localStorage.getItem('tec_pendientes') || '[]');
+  document.getElementById('sync-pendientes').textContent = p.length;
+  ESTADO.pendientes = p;
+}
+
+// ════════════════════════════════════════
+// VERIFICAR CONEXIÓN
+// ════════════════════════════════════════
+async function verificarConexion() {
+  const el = document.getElementById('sync-estado');
+  if (!ESTADO.online) { el.textContent = '❌ Sin conexión'; return; }
+  try {
+    await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/`, { headers: sb.headers() });
+    el.textContent = '🟢 Conectado';
+  } catch {
+    el.textContent = '🟡 Sin Supabase';
+  }
+  actualizarBadgePendientes();
+}
+
+// ════════════════════════════════════════
+// ADMIN RESUMEN
+// ════════════════════════════════════════
+async function cargarResumenAdmin() {
+  const hoy = new Date().toISOString().split('T')[0];
+  const data = await sb.get('registros_conductor', `fecha=eq.${hoy}`);
+  const el = document.getElementById('resumen-admin');
+  if (!data) { el.textContent = 'Error al cargar'; return; }
+  const abiertos = data.filter(r => r.estado_registro === 'abierto').length;
+  const cerrados = data.filter(r => r.estado_registro === 'cerrado').length;
+  el.innerHTML = `Hoy (${hoy}): <strong>${data.length}</strong> registros · 
+    <span style="color:var(--azul)">${abiertos} abiertos</span> · 
+    <span style="color:var(--verde)">${cerrados} cerrados</span>`;
+}
+
+// ════════════════════════════════════════
+// TOAST NOTIFICATIONS
+// ════════════════════════════════════════
+function toast(msg, tipo = 'success') {
+  const container = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${tipo === 'error' ? 'error' : tipo === 'warning' ? 'warning' : ''}`;
+  const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+  t.innerHTML = `<span class="toast-icon">${icons[tipo]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
+  container.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(120%)'; t.style.transition='all 0.4s'; setTimeout(()=>t.remove(),400); }, 3500);
+}
+
+// ════════════════════════════════════════
+// SERVICE WORKER
+// ════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    console.log('[SW] Registrado:', reg.scope);
+  }).catch(err => console.warn('[SW] Error:', err));
+
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data?.type === 'SYNC_PENDIENTES') sincronizarPendientes();
+  });
+}
+
+// Sincronización en background API
+if ('SyncManager' in window && navigator.serviceWorker.controller) {
+  navigator.serviceWorker.ready.then(sw => {
+    sw.sync.register('sync-pendientes').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
