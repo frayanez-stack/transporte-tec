@@ -902,6 +902,8 @@ async function guardarAvance() {
   const err = validarFormulario(data, false);
   if (err) { toast(err, 'error'); return; }
   const btn = document.querySelector('.btn-guardar-avance');
+  if (btn.dataset.guardando === 'true') return;
+  btn.dataset.guardando = 'true';
   btn.disabled = true; btn.textContent = 'Guardando…';
   data.estado_registro = 'abierto';
   let resultado;
@@ -915,6 +917,7 @@ async function guardarAvance() {
   if (resultado) { toast('✅ Avance guardado', 'success'); sincronizarASheets(ESTADO.registroActual || resultado[0] || data, 'registro'); }
   else { guardarPendienteLocal({tipo:'registro', data}); toast('⚠️ Guardado localmente', 'warning'); }
   btn.disabled = false; btn.textContent = '💾 Guardar avance';
+  btn.dataset.guardando = 'false';
 }
 
 // ═══════════════════════════════════════════
@@ -955,6 +958,8 @@ function cerrarConfirma() { document.getElementById('modal-confirma').classList.
 
 async function cerrarTurno() {
   const btn = document.getElementById('btn-confirm-ok');
+  if (btn.dataset.enviando === 'true') return; // evitar doble ejecución
+  btn.dataset.enviando = 'true';
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Enviando…';
   const data = obtenerDatosFormulario();
   data.estado_registro = 'cerrado';
@@ -978,6 +983,7 @@ async function cerrarTurno() {
     toast('⚠️ Guardado localmente', 'warning');
   }
   btn.disabled = false; btn.textContent = 'Confirmar cierre';
+  btn.dataset.enviando = 'false';
 }
 
 function limpiarFormulario() {
@@ -1273,23 +1279,36 @@ async function cargarResumenAdmin() {
 // ═══════════════════════════════════════════
 // SINCRONIZACIÓN GOOGLE SHEETS
 // ═══════════════════════════════════════════
+// Flag para evitar duplicados
+let _syncEnCurso = false;
+let _syncTimeout = null;
+
 async function sincronizarASheets(data, tipo) {
   if (!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.includes('TU_SCRIPT')) return;
-  try {
-    const dataEncoded = encodeURIComponent(JSON.stringify(data));
-    const url = CONFIG.APPS_SCRIPT_URL + '?tipo=' + tipo + '&data=' + dataEncoded;
-    const r = await fetch(url, { method: 'GET' });
-    const json = await r.json();
-    if (json.ok) console.log('[Sheets] OK:', json.accion);
-    else console.warn('[Sheets] Error:', json.error);
-  } catch(e) {
+  // Debounce: espera 800ms antes de enviar, cancela si llega otra llamada igual
+  const clave = tipo + '_' + (data?.id || data?.conductor || '');
+  if (_syncTimeout) clearTimeout(_syncTimeout);
+  _syncTimeout = setTimeout(async () => {
+    if (_syncEnCurso) return;
+    _syncEnCurso = true;
     try {
       const dataEncoded = encodeURIComponent(JSON.stringify(data));
       const url = CONFIG.APPS_SCRIPT_URL + '?tipo=' + tipo + '&data=' + dataEncoded;
-      await fetch(url, { mode: 'no-cors' });
-      console.log('[Sheets] Enviado no-cors');
-    } catch(e2) { console.warn('[Sheets] Fallo:', e2); }
-  }
+      const r = await fetch(url, { method: 'GET' });
+      const json = await r.json();
+      if (json.ok) console.log('[Sheets] OK:', json.accion);
+      else console.warn('[Sheets] Error:', json.error);
+    } catch(e) {
+      try {
+        const dataEncoded = encodeURIComponent(JSON.stringify(data));
+        const url = CONFIG.APPS_SCRIPT_URL + '?tipo=' + tipo + '&data=' + dataEncoded;
+        await fetch(url, { mode: 'no-cors' });
+        console.log('[Sheets] Enviado no-cors');
+      } catch(e2) { console.warn('[Sheets] Fallo:', e2); }
+    } finally {
+      _syncEnCurso = false;
+    }
+  }, 800);
 }
 
 // ═══════════════════════════════════════════
