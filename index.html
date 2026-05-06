@@ -1279,36 +1279,52 @@ async function cargarResumenAdmin() {
 // ═══════════════════════════════════════════
 // SINCRONIZACIÓN GOOGLE SHEETS
 // ═══════════════════════════════════════════
-// Flag para evitar duplicados
-let _syncEnCurso = false;
-let _syncTimeout = null;
+// Anti-duplicados: registro de IDs ya enviados
+const _syncEnviados = new Set();
+const _syncTimers = {};
 
 async function sincronizarASheets(data, tipo) {
   if (!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.includes('TU_SCRIPT')) return;
-  // Debounce: espera 800ms antes de enviar, cancela si llega otra llamada igual
-  const clave = tipo + '_' + (data?.id || data?.conductor || '');
-  if (_syncTimeout) clearTimeout(_syncTimeout);
-  _syncTimeout = setTimeout(async () => {
-    if (_syncEnCurso) return;
-    _syncEnCurso = true;
+
+  // Clave única por registro+tipo+estado
+  const clave = tipo + '_' + (data?.id || '') + '_' + (data?.estado_registro || data?.estado || '');
+
+  // Si ya fue enviado este exacto registro, ignorar
+  if (_syncEnviados.has(clave)) {
+    console.log('[Sheets] Duplicado ignorado:', clave);
+    return;
+  }
+
+  // Cancelar timer anterior para la misma clave
+  if (_syncTimers[clave]) clearTimeout(_syncTimers[clave]);
+
+  // Esperar 1500ms antes de enviar (debounce robusto)
+  _syncTimers[clave] = setTimeout(async () => {
+    // Doble verificación anti-duplicado
+    if (_syncEnviados.has(clave)) return;
+    _syncEnviados.add(clave);
+
     try {
       const dataEncoded = encodeURIComponent(JSON.stringify(data));
       const url = CONFIG.APPS_SCRIPT_URL + '?tipo=' + tipo + '&data=' + dataEncoded;
       const r = await fetch(url, { method: 'GET' });
       const json = await r.json();
-      if (json.ok) console.log('[Sheets] OK:', json.accion);
+      if (json.ok) console.log('[Sheets] OK:', json.accion, clave);
       else console.warn('[Sheets] Error:', json.error);
     } catch(e) {
       try {
         const dataEncoded = encodeURIComponent(JSON.stringify(data));
         const url = CONFIG.APPS_SCRIPT_URL + '?tipo=' + tipo + '&data=' + dataEncoded;
         await fetch(url, { mode: 'no-cors' });
-        console.log('[Sheets] Enviado no-cors');
-      } catch(e2) { console.warn('[Sheets] Fallo:', e2); }
-    } finally {
-      _syncEnCurso = false;
+        console.log('[Sheets] Enviado no-cors:', clave);
+      } catch(e2) {
+        // Si falla, remover del set para permitir reintento
+        _syncEnviados.delete(clave);
+        console.warn('[Sheets] Fallo total:', e2);
+      }
     }
-  }, 800);
+    delete _syncTimers[clave];
+  }, 1500);
 }
 
 // ═══════════════════════════════════════════
