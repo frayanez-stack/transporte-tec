@@ -682,13 +682,20 @@ tr:hover td{background:var(--rojo-light);}
     <div id="bloque-entrega">
       <div class="campo requerido">
         <label>Foto de la entrega (obligatoria)</label>
-        <div class="foto-area" id="foto-area" onclick="document.getElementById('foto-input').click()">
-          <input type="file" id="foto-input" accept="image/*" capture="environment" onchange="previewFoto(this)"/>
+        <!-- Input fuera del área clickeable para evitar doble disparo en móvil -->
+        <input type="file" id="foto-input" accept="image/*" capture="environment"
+          style="display:none;" onchange="previewFoto(this)"/>
+        <div class="foto-area" id="foto-area" onclick="abrirCamara()">
           <div class="foto-placeholder">
             <div class="foto-icon">📷</div>
-            <p>Toca para tomar foto o seleccionar imagen</p>
+            <p>Toca para tomar foto</p>
+            <p style="font-size:0.75rem;color:#aaa;margin-top:4px;">También puedes elegir desde galería</p>
           </div>
           <img class="foto-preview" id="foto-preview" src="" alt="Foto entrega"/>
+        </div>
+        <!-- Solo cámara en vivo -->
+        <div style="margin-top:8px;" id="foto-botones">
+          <button type="button" onclick="abrirCamara()" style="width:100%;padding:12px;background:var(--azul);color:#fff;border:none;border-radius:var(--radio);font-size:0.9rem;font-weight:700;">📷 Tomar foto en vivo</button>
         </div>
         <div class="campo-error-msg" id="error-foto" style="display:none;">⚠️ La foto es obligatoria para confirmar la entrega</div>
       </div>
@@ -1536,6 +1543,7 @@ function abrirModalEstado(facturaId, nuevoEstado){
   document.getElementById('foto-preview').src='';
   document.getElementById('foto-area').classList.remove('tiene-foto');
   document.getElementById('foto-input').value='';
+  document.getElementById('foto-botones').style.display='block';
   ['error-foto','error-receptor','error-bultos'].forEach(id=>document.getElementById(id).style.display='none');
 
   // Título y visibilidad del bloque de entrega
@@ -1551,17 +1559,49 @@ function cerrarModalEstado(){
   ESTADO.facturaActiva=null;ESTADO.estadoActivo=null;ESTADO.fotoBase64=null;
 }
 
+function abrirCamara(){
+  // Siempre forzar cámara trasera en vivo
+  const input=document.getElementById('foto-input');
+  input.setAttribute('capture','environment');
+  input.click();
+}
+
 function previewFoto(input){
   const file=input.files[0];
-  if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    ESTADO.fotoBase64=e.target.result;
-    document.getElementById('foto-preview').src=e.target.result;
+  if(!file){ console.warn('[FOTO] Sin archivo'); return; }
+  console.log('[FOTO] Archivo recibido:', file.name, file.size, file.type);
+
+  // Comprimir imagen antes de guardar (máx 800px, calidad 0.7)
+  const img=new Image();
+  const url=URL.createObjectURL(file);
+  img.onload=()=>{
+    const MAX=800;
+    let w=img.width, h=img.height;
+    if(w>MAX||h>MAX){
+      if(w>h){h=Math.round(h*(MAX/w));w=MAX;}
+      else{w=Math.round(w*(MAX/h));h=MAX;}
+    }
+    const canvas=document.createElement('canvas');
+    canvas.width=w; canvas.height=h;
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,w,h);
+    const base64=canvas.toDataURL('image/jpeg',0.75);
+    URL.revokeObjectURL(url);
+
+    ESTADO.fotoBase64=base64;
+    const preview=document.getElementById('foto-preview');
+    preview.src=base64;
     document.getElementById('foto-area').classList.add('tiene-foto');
     document.getElementById('error-foto').style.display='none';
+    document.getElementById('foto-botones').style.display='none';
+    console.log('[FOTO] OK — tamaño base64:', Math.round(base64.length/1024)+'KB');
   };
-  reader.readAsDataURL(file);
+  img.onerror=()=>{
+    console.error('[FOTO] Error cargando imagen');
+    toast('Error al procesar la foto. Intenta nuevamente.','error');
+    URL.revokeObjectURL(url);
+  };
+  img.src=url;
 }
 
 async function confirmarEstado(){
