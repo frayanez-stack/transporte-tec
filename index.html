@@ -183,7 +183,7 @@ button{cursor:pointer;}
 .foto-area.tiene-foto .foto-placeholder{display:none;}
 .foto-placeholder p{color:var(--gris);font-size:0.88rem;margin-top:8px;}
 .foto-placeholder .foto-icon{font-size:2.5rem;}
-#foto-input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+#foto-input{display:none;}
 
 /* MODAL CONFIRMA */
 .modal-confirma{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1500;align-items:center;justify-content:center;padding:20px;}
@@ -693,9 +693,19 @@ tr:hover td{background:var(--rojo-light);}
           </div>
           <img class="foto-preview" id="foto-preview" src="" alt="Foto entrega"/>
         </div>
-        <!-- Solo cámara en vivo -->
+            <!-- Botón de cámara -->
         <div style="margin-top:8px;" id="foto-botones">
-          <button type="button" onclick="abrirCamara()" style="width:100%;padding:12px;background:var(--azul);color:#fff;border:none;border-radius:var(--radio);font-size:0.9rem;font-weight:700;">📷 Tomar foto en vivo</button>
+          <button type="button" id="btn-camara" onclick="abrirCamara()"
+            style="width:100%;padding:14px;background:var(--azul);color:#fff;border:none;border-radius:var(--radio);font-size:0.95rem;font-weight:700;letter-spacing:0.3px;">
+            📷 Tomar foto en vivo
+          </button>
+        </div>
+        <!-- Botón retomar foto (aparece después de tomar) -->
+        <div style="margin-top:8px;display:none;" id="foto-retomar">
+          <button type="button" onclick="retomar()"
+            style="width:100%;padding:10px;background:var(--gris-light);color:var(--negro);border:2px solid #e0e0e0;border-radius:var(--radio);font-size:0.85rem;font-weight:700;">
+            🔄 Retomar foto
+          </button>
         </div>
         <div class="campo-error-msg" id="error-foto" style="display:none;">⚠️ La foto es obligatoria para confirmar la entrega</div>
       </div>
@@ -1560,48 +1570,96 @@ function cerrarModalEstado(){
 }
 
 function abrirCamara(){
-  // Siempre forzar cámara trasera en vivo
-  const input=document.getElementById('foto-input');
-  input.setAttribute('capture','environment');
-  input.click();
+  // Crear input fresco cada vez para evitar problemas de caché en móvil
+  const viejo = document.getElementById('foto-input');
+  if(viejo) viejo.remove();
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.id = 'foto-input';
+  input.accept = 'image/*';
+  input.setAttribute('capture', 'environment'); // cámara trasera en vivo
+  input.style.display = 'none';
+  document.body.appendChild(input);
+
+  input.addEventListener('change', function(){
+    if(this.files && this.files[0]){
+      procesarFoto(this.files[0]);
+    }
+  });
+
+  // Pequeño delay para iOS
+  setTimeout(() => input.click(), 100);
 }
 
-function previewFoto(input){
-  const file=input.files[0];
-  if(!file){ console.warn('[FOTO] Sin archivo'); return; }
-  console.log('[FOTO] Archivo recibido:', file.name, file.size, file.type);
+function retomar(){
+  ESTADO.fotoBase64 = null;
+  document.getElementById('foto-preview').src = '';
+  document.getElementById('foto-area').classList.remove('tiene-foto');
+  document.getElementById('foto-botones').style.display = 'block';
+  document.getElementById('foto-retomar').style.display = 'none';
+  document.getElementById('error-foto').style.display = 'none';
+  abrirCamara();
+}
 
-  // Comprimir imagen antes de guardar (máx 800px, calidad 0.7)
-  const img=new Image();
-  const url=URL.createObjectURL(file);
-  img.onload=()=>{
-    const MAX=800;
-    let w=img.width, h=img.height;
-    if(w>MAX||h>MAX){
-      if(w>h){h=Math.round(h*(MAX/w));w=MAX;}
-      else{w=Math.round(w*(MAX/h));h=MAX;}
-    }
-    const canvas=document.createElement('canvas');
-    canvas.width=w; canvas.height=h;
-    const ctx=canvas.getContext('2d');
-    ctx.drawImage(img,0,0,w,h);
-    const base64=canvas.toDataURL('image/jpeg',0.75);
-    URL.revokeObjectURL(url);
+function procesarFoto(file){
+  if(!file){ toast('No se recibió la foto','error'); return; }
+  console.log('[FOTO] Procesando:', file.name, Math.round(file.size/1024)+'KB', file.type);
 
-    ESTADO.fotoBase64=base64;
-    const preview=document.getElementById('foto-preview');
-    preview.src=base64;
-    document.getElementById('foto-area').classList.add('tiene-foto');
-    document.getElementById('error-foto').style.display='none';
-    document.getElementById('foto-botones').style.display='none';
-    console.log('[FOTO] OK — tamaño base64:', Math.round(base64.length/1024)+'KB');
+  // Mostrar loading mientras procesa
+  document.getElementById('btn-camara').textContent = '⏳ Procesando foto...';
+  document.getElementById('btn-camara').disabled = true;
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const dataUrl = e.target.result;
+    const img = new Image();
+    img.onload = function(){
+      // Comprimir: máx 1024px, calidad 80%
+      const MAX = 1024;
+      let w = img.width, h = img.height;
+      if(w > MAX || h > MAX){
+        if(w > h){ h = Math.round(h*(MAX/w)); w = MAX; }
+        else{ w = Math.round(w*(MAX/h)); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      // Manejar orientación EXIF en móvil
+      ctx.drawImage(img, 0, 0, w, h);
+      const base64 = canvas.toDataURL('image/jpeg', 0.80);
+
+      // Guardar en estado global
+      ESTADO.fotoBase64 = base64;
+      console.log('[FOTO] OK —', Math.round(base64.length/1024)+'KB comprimida');
+
+      // Mostrar preview
+      const preview = document.getElementById('foto-preview');
+      preview.src = base64;
+      document.getElementById('foto-area').classList.add('tiene-foto');
+      document.getElementById('error-foto').style.display = 'none';
+      document.getElementById('foto-botones').style.display = 'none';
+      document.getElementById('foto-retomar').style.display = 'block';
+
+      // Restaurar botón
+      document.getElementById('btn-camara').textContent = '📷 Tomar foto en vivo';
+      document.getElementById('btn-camara').disabled = false;
+
+      toast('📷 Foto capturada correctamente', 'success');
+    };
+    img.onerror = function(){
+      toast('Error al procesar la foto. Intenta nuevamente.','error');
+      document.getElementById('btn-camara').textContent = '📷 Tomar foto en vivo';
+      document.getElementById('btn-camara').disabled = false;
+    };
+    img.src = dataUrl;
   };
-  img.onerror=()=>{
-    console.error('[FOTO] Error cargando imagen');
-    toast('Error al procesar la foto. Intenta nuevamente.','error');
-    URL.revokeObjectURL(url);
+  reader.onerror = function(){
+    toast('Error al leer la foto','error');
+    document.getElementById('btn-camara').textContent = '📷 Tomar foto en vivo';
+    document.getElementById('btn-camara').disabled = false;
   };
-  img.src=url;
+  reader.readAsDataURL(file);
 }
 
 async function confirmarEstado(){
@@ -1633,8 +1691,18 @@ async function confirmarEstado(){
   let fotoUrl=null;
   if(nuevoEstado==='entregado'&&ESTADO.fotoBase64){
     mostrarLoading('Subiendo foto...');
-    const nombre=`${facturaId}_${Date.now()}.jpg`;
-    fotoUrl=await sb.uploadFoto(ESTADO.fotoBase64,nombre);
+    try{
+      const nombre=`${facturaId}_${Date.now()}.jpg`;
+      fotoUrl=await sb.uploadFoto(ESTADO.fotoBase64,nombre);
+      if(!fotoUrl){
+        // Si falla el upload al storage, guardar base64 directamente (máx 1MB)
+        console.warn('[FOTO] Upload falló, guardando base64 directo');
+        fotoUrl=ESTADO.fotoBase64.length < 900000 ? ESTADO.fotoBase64 : null;
+      }
+    }catch(e){
+      console.warn('[FOTO] Error upload:',e);
+      fotoUrl=ESTADO.fotoBase64.length < 900000 ? ESTADO.fotoBase64 : null;
+    }
   }
 
   const bultosEnt=parseInt(document.getElementById('entrega-bultos').value)||null;
