@@ -339,11 +339,16 @@ tr:hover td{background:var(--rojo-light);}
               <input type="text" id="reg-peoneta-otro" placeholder="Nombre del peoneta"/>
             </div>
           </div>
-          <div class="campo">
+          <div class="campo" id="campo-conductor-admin">
             <label>Conductor responsable</label>
             <select id="reg-conductor">
               <option value="">Selecciona</option>
             </select>
+          </div>
+          <!-- Para conductores: muestra su nombre fijo -->
+          <div class="campo" id="campo-conductor-readonly" style="display:none;">
+            <label>Conductor</label>
+            <input type="text" id="reg-conductor-display" readonly style="background:#f0fff4;font-weight:700;color:#27ae60;"/>
           </div>
           <div class="campo">
             <label>Turno</label>
@@ -437,8 +442,18 @@ tr:hover td{background:var(--rojo-light);}
         <div style="font-size:0.85rem;color:var(--gris);">Primero guarda un registro en la pestaña "Registro".</div>
       </div>
       <div id="facturas-content" style="display:none;">
+        <!-- Botón cargar ruta — solo conductores -->
+        <div id="btn-cargar-ruta-bloque" style="display:none;margin-bottom:12px;">
+          <button onclick="cargarMiRuta()"
+            style="width:100%;padding:14px;background:linear-gradient(135deg,#2980b9,#1a6a9a);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:800;letter-spacing:0.3px;box-shadow:0 4px 12px rgba(41,128,185,0.3);">
+            🔄 Cargar mi ruta actualizada
+          </button>
+          <p style="font-size:0.75rem;color:var(--gris);text-align:center;margin-top:6px;">
+            Lee tus facturas asignadas desde Google Sheets en tiempo real
+          </p>
+        </div>
         <div class="facturas-toolbar">
-          <button class="btn-agregar-factura" onclick="abrirModalFactura()">+ Agregar factura</button>
+          <button class="btn-agregar-factura" onclick="abrirModalFactura()">+ Agregar</button>
           <button class="btn-icon btn-outline" onclick="abrirModalImportar()">📤 Importar</button>
           <span style="font-size:0.82rem;color:var(--gris);margin-left:auto;" id="resumen-facturas">0 facturas</span>
         </div>
@@ -765,6 +780,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://bpepsrrznvsshzeqxojp.supabase.co',
   SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwZXBzcnJ6bnZzc2h6ZXF4b2pwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTQzMzAsImV4cCI6MjA5MzU3MDMzMH0.tbE_LgOcZtgAkRxOzg4xRXf7ec7o1mPkCp3I9yDz5e8',
   APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxad7amQpQK_FxCBvakq971Rbwk_LncMVDCHBQaQQULUFe21ssxw3zCDtrH9zYxsUL_FQ/exec',
+  SHEETS_RUTAS_ID: '1cuJ7DPyqXJFGXfPwj02sw5m-kj4AaytXJgkVB1d93A0', // ID fijo Google Sheets rutas
 };
 
 // ════════════════════════════════════════════
@@ -883,6 +899,21 @@ async function iniciarApp(){
   document.getElementById('user-avatar').textContent=u.nombre[0].toUpperCase();
   if(u.rol==='admin') document.querySelectorAll('.admin-only').forEach(el=>el.style.display='');
 
+  // Ajustar UI según rol
+  if(u.rol==='conductor'){
+    // Ocultar campo conductor seleccionable y mostrar readonly
+    document.getElementById('campo-conductor-admin').style.display='none';
+    document.getElementById('campo-conductor-readonly').style.display='block';
+    document.getElementById('reg-conductor-display').value=u.nombre;
+    // Mostrar botón cargar mi ruta
+    document.getElementById('btn-cargar-ruta-bloque').style.display='block';
+  } else {
+    // Admin ve selector normal
+    document.getElementById('campo-conductor-admin').style.display='block';
+    document.getElementById('campo-conductor-readonly').style.display='none';
+    document.getElementById('btn-cargar-ruta-bloque').style.display='none';
+  }
+
   document.getElementById('reg-fecha').value=new Date().toISOString().split('T')[0];
   if(new Date().getDay()===1) document.getElementById('checklist-semanal-bloque').style.display='block';
 
@@ -905,24 +936,26 @@ function cerrarSesion(){if(confirm('¿Cerrar sesión?')){localStorage.removeItem
 // MAESTRAS DESDE SUPABASE
 // ════════════════════════════════════════════
 async function cargarTodasMaestras(){
-  await Promise.all([
-    cargarMaestra('conductores'),
-    cargarMaestra('vehiculos'),
-    cargarMaestra('peonetas'),
-    cargarMaestra('couriers'),
-    cargarMaestra('clientes_maestro'),
+  // Cargar cada maestra con su orden correcto
+  const [cond,veh,peon,cour,cli] = await Promise.all([
+    sb.get('conductores',    'activo=eq.true&order=nombre.asc'),
+    sb.get('vehiculos',      'activo=eq.true&order=marca.asc'),      // vehiculos NO tiene col nombre
+    sb.get('peonetas',       'activo=eq.true&order=nombre.asc'),
+    sb.get('couriers',       'activo=eq.true&order=nombre.asc'),
+    sb.get('clientes_maestro','activo=eq.true&order=razon_social.asc&limit=500'),
   ]);
-  poblarSelectores();
-  if(ESTADO.usuario.rol==='admin') renderizarAdmin();
-}
+  ESTADO.maestras.conductores = cond  || [];
+  ESTADO.maestras.vehiculos   = veh   || [];
+  ESTADO.maestras.peonetas    = peon  || [];
+  ESTADO.maestras.couriers    = cour  || [];
+  ESTADO.maestras.clientes    = cli   || [];
 
-async function cargarMaestra(tabla){
-  const data=await sb.get(tabla,'order=nombre.asc&activo=eq.true');
-  if(tabla==='conductores') ESTADO.maestras.conductores=data||[];
-  else if(tabla==='vehiculos') ESTADO.maestras.vehiculos=data||[];
-  else if(tabla==='peonetas') ESTADO.maestras.peonetas=data||[];
-  else if(tabla==='couriers') ESTADO.maestras.couriers=data||[];
-  else if(tabla==='clientes_maestro') ESTADO.maestras.clientes=data||[];
+  console.log('[Maestras] conductores:', ESTADO.maestras.conductores.length,
+    '| vehiculos:', ESTADO.maestras.vehiculos.length,
+    '| peonetas:', ESTADO.maestras.peonetas.length,
+    '| couriers:', ESTADO.maestras.couriers.length);
+
+  poblarSelectores();
 }
 
 function poblarSelectores(){
@@ -1032,10 +1065,10 @@ function renderizarAdmin(){
 
 async function cargarTodasMaestrasAdmin(){
   const [cond,veh,peon,cour,cli]=await Promise.all([
-    sb.get('conductores','order=nombre.asc'),
-    sb.get('vehiculos','order=marca.asc'),
-    sb.get('peonetas','order=nombre.asc'),
-    sb.get('couriers','order=nombre.asc'),
+    sb.get('conductores',     'order=nombre.asc'),
+    sb.get('vehiculos',       'order=marca.asc'),
+    sb.get('peonetas',        'order=nombre.asc'),
+    sb.get('couriers',        'order=nombre.asc'),
     sb.get('clientes_maestro','order=razon_social.asc&limit=100'),
   ]);
   ESTADO.maestras.conductores=cond?.filter(c=>c.activo)||[];
@@ -1225,7 +1258,9 @@ function obtenerDatosFormulario(){
     unidad:document.getElementById('reg-unidad').value,
     patente:document.getElementById('reg-patente').value,
     peoneta:obtenerPeoneta(),
-    conductor:document.getElementById('reg-conductor').value,
+    conductor:ESTADO.usuario.rol==='conductor'
+      ? ESTADO.usuario.nombre
+      : document.getElementById('reg-conductor').value,
     turno:document.getElementById('reg-turno').value,
     transportes_visitados:[],
     kilometraje_inicial:parseInt(document.getElementById('reg-km-inicial').value)||null,
@@ -1822,6 +1857,173 @@ async function probarWsp(){
   if(!num||!key){toast('Guarda número y API key primero','error');return;}
   await fetch(`https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(num)}&text=${encodeURIComponent('✅ TEC Transporte - Sistema activo!')}&apikey=${key}`,{mode:'no-cors'});
   toast('📲 Mensaje de prueba enviado','success');
+}
+
+
+// ════════════════════════════════════════════
+// CARGAR MI RUTA DESDE GOOGLE SHEETS
+// ════════════════════════════════════════════
+async function cargarMiRuta(){
+  if(!ESTADO.registroActual){
+    toast('Primero guarda el turno (unidad, peoneta y km inicial)','warning');
+    mostrarSeccion('registro', document.querySelectorAll('.nav-tab')[0]);
+    return;
+  }
+
+  const turno = document.getElementById('reg-turno').value || 'AM';
+  const nombreConductor = ESTADO.usuario.nombre;
+  const hojaName = turno === 'AM' ? 'Ruta AM' : 'Ruta PM';
+  const sheetId = CONFIG.SHEETS_RUTAS_ID;
+
+  mostrarLoading(`Cargando ruta ${turno} para ${nombreConductor}...`);
+
+  try {
+    // Leer CSV desde Google Sheets (debe ser pública)
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(hojaName)}`;
+    const r = await fetch(csvUrl);
+    if(!r.ok) throw new Error(`Error HTTP ${r.status}`);
+    const texto = await r.text();
+
+    // Parsear CSV
+    const lineas = texto.split('
+').filter(l => l.trim());
+    if(lineas.length < 2){ ocultarLoading(); toast('La hoja está vacía','warning'); return; }
+
+    // Detectar headers (buscar fila con "N° Factura" o similar)
+    let headerRow = -1;
+    let headers = [];
+    for(let i = 0; i < Math.min(6, lineas.length); i++){
+      const cols = parsearCSVLinea(lineas[i]);
+      const h = cols.map(c => c.toLowerCase());
+      if(h.some(c => c.includes('factura') || c.includes('cliente'))){
+        headerRow = i;
+        headers = cols.map(c => c.replace(/"/g,'').trim().toLowerCase());
+        break;
+      }
+    }
+
+    if(headerRow < 0){ ocultarLoading(); toast('No se encontraron headers en la hoja','error'); return; }
+
+    // Índices de columnas clave
+    const getIdx = (keys) => {
+      for(const k of keys){
+        const idx = headers.findIndex(h => h.includes(k));
+        if(idx >= 0) return idx;
+      }
+      return -1;
+    };
+
+    const iFactura    = getIdx(['factura','n°','numero','nro']);
+    const iCliente    = getIdx(['cliente','razon','nombre']);
+    const iRut        = getIdx(['rut']);
+    const iDireccion  = getIdx(['direcci']);
+    const iComuna     = getIdx(['comuna']);
+    const iTelefono   = getIdx(['telefono','fono','teléfono']);
+    const iBultos     = getIdx(['bulto','cantidad']);
+    const iObs        = getIdx(['observa','obs']);
+    const iConductor  = getIdx(['conductor asig','conductor_asig','conductor']); // col K
+
+    // Filtrar filas del conductor logueado
+    const facturasFiltradas = [];
+    for(let i = headerRow + 1; i < lineas.length; i++){
+      const cols = parsearCSVLinea(lineas[i]);
+      if(cols.length < 2) continue;
+
+      // Verificar si la fila tiene número de factura
+      const numFac = iFactura >= 0 ? cols[iFactura]?.replace(/"/g,'').trim() : '';
+      if(!numFac || numFac === '0') continue;
+
+      // Verificar conductor asignado
+      const condAsig = iConductor >= 0 ? cols[iConductor]?.replace(/"/g,'').trim() : '';
+
+      // Si no hay conductor asignado O coincide con el conductor logueado → incluir
+      if(condAsig === '' || condAsig.toLowerCase() === nombreConductor.toLowerCase()){
+        facturasFiltradas.push({
+          numero_factura: numFac,
+          cliente:    iCliente >= 0 ? cols[iCliente]?.replace(/"/g,'').trim() : '',
+          rut:        iRut >= 0 ? cols[iRut]?.replace(/"/g,'').trim() : '',
+          direccion:  iDireccion >= 0 ? cols[iDireccion]?.replace(/"/g,'').trim() : '',
+          comuna:     iComuna >= 0 ? cols[iComuna]?.replace(/"/g,'').trim() : '',
+          telefono:   iTelefono >= 0 ? cols[iTelefono]?.replace(/"/g,'').trim() : '',
+          bultos_total: iBultos >= 0 ? parseInt(cols[iBultos]?.replace(/"/g,'')) || 0 : 0,
+          observacion_entrega: iObs >= 0 ? cols[iObs]?.replace(/"/g,'').trim() : '',
+          orden_entrega: facturasFiltradas.length + 1,
+        });
+      }
+    }
+
+    ocultarLoading();
+
+    if(facturasFiltradas.length === 0){
+      toast(`No hay facturas asignadas a ${nombreConductor} en ${hojaName}`,'warning');
+      return;
+    }
+
+    // Si ya hay facturas → preguntar
+    if(ESTADO.facturas.length > 0){
+      const resp = confirm(
+        `Se encontraron ${facturasFiltradas.length} facturas para ti en ${hojaName}.
+
+` +
+        `Ya tienes ${ESTADO.facturas.length} facturas cargadas.
+
+` +
+        `¿Reemplazar todo? (Cancelar = solo agregar las nuevas)`
+      );
+      if(resp){
+        // Reemplazar todo
+        ESTADO.facturas = [];
+      }
+      // Si cancela → solo agrega las que no existen
+    }
+
+    // Importar facturas filtradas
+    mostrarLoading(`Importando ${facturasFiltradas.length} facturas...`);
+    let agregadas = 0;
+    for(const fac of facturasFiltradas){
+      const existe = ESTADO.facturas.find(f => f.numero_factura === fac.numero_factura);
+      if(existe) continue;
+      const payload = {
+        ...fac,
+        registro_id: ESTADO.registroActual.id,
+        estado: 'pendiente',
+        tipo_despacho: 'propio',
+      };
+      const r = await sb.post('facturas_despacho', payload);
+      if(r && r.length > 0){ ESTADO.facturas.push(r[0]); agregadas++; }
+      else{ payload.id = 'local_' + Date.now(); ESTADO.facturas.push(payload); agregadas++; }
+    }
+
+    ocultarLoading();
+    renderizarFacturas();
+    toast(`✅ ${agregadas} facturas cargadas para ${nombreConductor}`,'success');
+
+  } catch(e){
+    ocultarLoading();
+    console.error('[RUTA]', e);
+    toast('Error al cargar la ruta: ' + e.message,'error');
+  }
+}
+
+// Parser CSV robusto (maneja comas dentro de comillas)
+function parsearCSVLinea(linea){
+  const resultado = [];
+  let actual = '';
+  let enComillas = false;
+  for(let i = 0; i < linea.length; i++){
+    const ch = linea[i];
+    if(ch === '"'){
+      if(enComillas && linea[i+1] === '"'){ actual += '"'; i++; }
+      else enComillas = !enComillas;
+    } else if(ch === ',' && !enComillas){
+      resultado.push(actual.trim());
+      actual = '';
+    } else {
+      actual += ch;
+    }
+  }
+  resultado.push(actual.trim());
+  return resultado;
 }
 
 // ════════════════════════════════════════════
